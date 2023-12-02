@@ -7,7 +7,7 @@
  */
 
 import {ChangeDetectionStrategy, ViewEncapsulation} from '../../core';
-import {InterpolationConfig} from '../../ml_parser/interpolation_config';
+import {InterpolationConfig} from '../../ml_parser/defaults';
 import * as o from '../../output/output_ast';
 import {ParseSourceSpan} from '../../parse_util';
 import * as t from '../r3_ast';
@@ -167,12 +167,14 @@ export const enum DeclarationListEmitMode {
    * ```
    */
   ClosureResolved,
+
+  RuntimeResolved,
 }
 
 /**
- * Describes a dependency used within a `{#defer}` block.
+ * Describes a dependency used within a `@defer` block.
  */
-export interface DeferBlockTemplateDependency {
+export interface R3DeferBlockTemplateDependency {
   /**
    * Reference to a dependency.
    */
@@ -195,6 +197,17 @@ export interface DeferBlockTemplateDependency {
 }
 
 /**
+ * Information necessary to compile a `defer` block.
+ */
+export interface R3DeferBlockMetadata {
+  /** Dependencies used within the block. */
+  deps: R3DeferBlockTemplateDependency[];
+
+  /** Mapping between triggers and the DOM nodes they refer to. */
+  triggerElements: Map<t.DeferredTrigger, t.Element|null>;
+}
+
+/**
  * Information needed to compile a component for the render3 runtime.
  */
 export interface R3ComponentMetadata<DeclarationT extends R3TemplateDependency> extends
@@ -213,6 +226,11 @@ export interface R3ComponentMetadata<DeclarationT extends R3TemplateDependency> 
      * element without selector is present.
      */
     ngContentSelectors: string[];
+
+    /**
+     * Whether the template preserves whitespaces from the user's code.
+     */
+    preserveWhitespaces?: boolean;
   };
 
   declarations: DeclarationT[];
@@ -225,9 +243,9 @@ export interface R3ComponentMetadata<DeclarationT extends R3TemplateDependency> 
   deferrableDeclToImportDecl: Map<o.Expression, o.Expression>;
 
   /**
-   * Map of {#defer} blocks -> their corresponding dependencies.
+   * Map of `@defer` blocks -> their corresponding metadata.
    */
-  deferBlocks: Map<t.DeferredBlock, Array<DeferBlockTemplateDependency>>;
+  deferBlocks: Map<t.DeferredBlock, R3DeferBlockMetadata>;
 
   /**
    * Specifies how the 'directives' and/or `pipes` array, if generated, need to be emitted.
@@ -279,8 +297,19 @@ export interface R3ComponentMetadata<DeclarationT extends R3TemplateDependency> 
 
   /**
    * Strategy used for detecting changes in the component.
+   *
+   * In global compilation mode the value is ChangeDetectionStrategy if available as it is
+   * statically resolved during analysis phase. Whereas in local compilation mode the value is the
+   * expression as appears in the decorator.
    */
-  changeDetection?: ChangeDetectionStrategy;
+  changeDetection: ChangeDetectionStrategy|o.Expression|null;
+
+  /**
+   * The imports expression as appears on the component decorate for standalone component. This
+   * field is currently needed only for local compilation, and so in other compilation modes it may
+   * not be set. If component has empty array imports then this field is not set.
+   */
+  rawImports?: o.Expression;
 }
 
 /**

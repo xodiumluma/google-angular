@@ -27,25 +27,25 @@
     "name": "AnimationAstBuilderVisitor"
   },
   {
-    "name": "AnimationBuilder"
-  },
-  {
     "name": "AnimationDriver"
   },
   {
     "name": "AnimationEngine"
   },
   {
-    "name": "AnimationFactory"
+    "name": "AnimationGroupPlayer"
   },
   {
-    "name": "AnimationGroupPlayer"
+    "name": "AnimationMetadataType"
   },
   {
     "name": "AnimationRenderer"
   },
   {
     "name": "AnimationRendererFactory"
+  },
+  {
+    "name": "AnimationStateStyles"
   },
   {
     "name": "AnimationStyleNormalizer"
@@ -58,6 +58,12 @@
   },
   {
     "name": "AnimationTransitionFactory"
+  },
+  {
+    "name": "AnimationTransitionNamespace"
+  },
+  {
+    "name": "AnimationTrigger"
   },
   {
     "name": "AnimationsComponent"
@@ -102,12 +108,6 @@
     "name": "BehaviorSubject"
   },
   {
-    "name": "BrowserAnimationBuilder"
-  },
-  {
-    "name": "BrowserAnimationFactory"
-  },
-  {
     "name": "BrowserAnimationsModule"
   },
   {
@@ -130,6 +130,9 @@
   },
   {
     "name": "CSP_NONCE"
+  },
+  {
+    "name": "ChainedInjector"
   },
   {
     "name": "ChangeDetectionStrategy"
@@ -186,6 +189,9 @@
     "name": "DefaultDomRenderer2"
   },
   {
+    "name": "DistinctUntilChangedOperator"
+  },
+  {
     "name": "DistinctUntilChangedSubscriber"
   },
   {
@@ -225,9 +231,6 @@
     "name": "EVENT_MANAGER_PLUGINS"
   },
   {
-    "name": "EffectManager"
-  },
-  {
     "name": "ElementInstructionMap"
   },
   {
@@ -258,9 +261,6 @@
     "name": "GenericBrowserDomAdapter"
   },
   {
-    "name": "HAS_TRANSPLANTED_VIEWS"
-  },
-  {
     "name": "INJECTOR2"
   },
   {
@@ -286,6 +286,9 @@
   },
   {
     "name": "KeyEventsPlugin"
+  },
+  {
+    "name": "LContainerFlags"
   },
   {
     "name": "LEAVE_TOKEN_REGEX"
@@ -366,9 +369,6 @@
     "name": "NG_TEMPLATE_SELECTOR"
   },
   {
-    "name": "NOOP_CLEANUP_FN"
-  },
-  {
     "name": "NOT_FOUND"
   },
   {
@@ -426,6 +426,9 @@
     "name": "NoopAnimationPlayer"
   },
   {
+    "name": "NoopNgZone"
+  },
+  {
     "name": "NullInjector"
   },
   {
@@ -459,22 +462,16 @@
     "name": "R3Injector"
   },
   {
+    "name": "REACTIVE_LVIEW_CONSUMER_NODE"
+  },
+  {
     "name": "REMOVE_STYLES_ON_COMPONENT_DESTROY"
-  },
-  {
-    "name": "ReactiveLViewConsumer"
-  },
-  {
-    "name": "ReactiveNode"
   },
   {
     "name": "RefCountOperator"
   },
   {
     "name": "RefCountSubscriber"
-  },
-  {
-    "name": "RendererAnimationPlayer"
   },
   {
     "name": "RendererFactory2"
@@ -484,9 +481,6 @@
   },
   {
     "name": "RootComponent"
-  },
-  {
-    "name": "RootViewRef"
   },
   {
     "name": "RuntimeError"
@@ -579,7 +573,13 @@
     "name": "TestabilityRegistry"
   },
   {
+    "name": "TimelineAnimationEngine"
+  },
+  {
     "name": "TimelineBuilder"
+  },
+  {
+    "name": "TransitionAnimationEngine"
   },
   {
     "name": "TransitionAnimationPlayer"
@@ -600,10 +600,7 @@
     "name": "ViewRef"
   },
   {
-    "name": "Watch"
-  },
-  {
-    "name": "WeakRefImpl"
+    "name": "WebAnimationsDriver"
   },
   {
     "name": "WebAnimationsPlayer"
@@ -663,9 +660,6 @@
     "name": "_locateOrCreateElementNode"
   },
   {
-    "name": "_nextReactiveId"
-  },
-  {
     "name": "_platformInjector"
   },
   {
@@ -723,6 +717,9 @@
     "name": "applyView"
   },
   {
+    "name": "assertConsumerNode"
+  },
+  {
     "name": "attachPatchData"
   },
   {
@@ -762,9 +759,6 @@
     "name": "cleanUpView"
   },
   {
-    "name": "clearViewRefreshFlag"
-  },
-  {
     "name": "cloakAndComputeStyles"
   },
   {
@@ -774,7 +768,7 @@
     "name": "collectNativeNodes"
   },
   {
-    "name": "commitLViewConsumerIfHasProducers"
+    "name": "collectNativeNodesInLContainer"
   },
   {
     "name": "computeStaticStyling"
@@ -793,6 +787,12 @@
   },
   {
     "name": "connectableObservableDescriptor"
+  },
+  {
+    "name": "consumerIsLive"
+  },
+  {
+    "name": "consumerPollProducersForChange"
   },
   {
     "name": "containsElement"
@@ -846,9 +846,6 @@
     "name": "createTransitionInstruction"
   },
   {
-    "name": "currentConsumer"
-  },
-  {
     "name": "dashCaseToCamelCase"
   },
   {
@@ -873,7 +870,7 @@
     "name": "detectChangesInView"
   },
   {
-    "name": "detectChangesInternal"
+    "name": "detectChangesInViewIfAttached"
   },
   {
     "name": "diPublicInInjector"
@@ -892,6 +889,9 @@
   },
   {
     "name": "enterView"
+  },
+  {
+    "name": "epoch"
   },
   {
     "name": "eraseStyles"
@@ -934,6 +934,9 @@
   },
   {
     "name": "forwardRef"
+  },
+  {
+    "name": "freeConsumers"
   },
   {
     "name": "from"
@@ -1017,9 +1020,6 @@
     "name": "getOrCreateComponentTView"
   },
   {
-    "name": "getOrCreateCurrentLViewConsumer"
-  },
-  {
     "name": "getOrCreateInjectable"
   },
   {
@@ -1062,9 +1062,6 @@
     "name": "getPromiseCtor"
   },
   {
-    "name": "getReactiveLViewConsumer"
-  },
-  {
     "name": "getSimpleChangesStore"
   },
   {
@@ -1093,9 +1090,6 @@
   },
   {
     "name": "importProvidersFrom"
-  },
-  {
-    "name": "inNotificationPhase"
   },
   {
     "name": "includeViewProviders"
@@ -1230,9 +1224,6 @@
     "name": "isValueProvider"
   },
   {
-    "name": "issueAnimationCommand"
-  },
-  {
     "name": "iterator"
   },
   {
@@ -1270,6 +1261,9 @@
   },
   {
     "name": "map"
+  },
+  {
+    "name": "markAncestorsForTraversal"
   },
   {
     "name": "markAsComponentHost"
@@ -1353,9 +1347,6 @@
     "name": "parseTimelineCommand"
   },
   {
-    "name": "parseTransitionExpr"
-  },
-  {
     "name": "platformBrowser"
   },
   {
@@ -1363,6 +1354,12 @@
   },
   {
     "name": "processInjectorTypesWithProviders"
+  },
+  {
+    "name": "producerRemoveLiveConsumerAtIndex"
+  },
+  {
+    "name": "producerUpdateValueVersion"
   },
   {
     "name": "profiler"
@@ -1404,6 +1401,9 @@
     "name": "replacePostStylesAsPre"
   },
   {
+    "name": "requiresRefreshOrTraversal"
+  },
+  {
     "name": "resetPreOrderHookFlags"
   },
   {
@@ -1432,9 +1432,6 @@
   },
   {
     "name": "searchTokensOnInjector"
-  },
-  {
-    "name": "sequence"
   },
   {
     "name": "setActiveConsumer"
@@ -1530,10 +1527,7 @@
     "name": "updateMicroTaskStatus"
   },
   {
-    "name": "updateViewsToRefresh"
-  },
-  {
-    "name": "urlParsingNode"
+    "name": "viewAttachedToChangeDetector"
   },
   {
     "name": "visitDslNode"

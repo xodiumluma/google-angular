@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement, Type} from '@angular/compiler';
+import {CssSelector, ParseSourceFile, ParseSourceSpan, parseTemplate, ParseTemplateOptions, R3TargetBinder, SchemaMetadata, SelectorMatcher, TmplAstElement} from '@angular/compiler';
 import ts from 'typescript';
 
 import {absoluteFrom, AbsoluteFsPath, getSourceFileOrError, LogicalFileSystem} from '../../file_system';
@@ -249,6 +249,8 @@ export interface TestDirective extends Partial<Pick<
   undeclaredInputFields?: string[];
   isGeneric?: boolean;
   code?: string;
+  ngContentSelectors?: string[]|null;
+  preserveWhitespaces?: boolean;
   hostDirectives?: {
     directive: TestDirective&{isStandalone: true},
     inputs?: string[],
@@ -269,7 +271,7 @@ export type TestDeclaration = TestDirective|TestPipe;
 
 export function tcb(
     template: string, declarations: TestDeclaration[] = [], config?: Partial<TypeCheckingConfig>,
-    options?: {emitSpans?: boolean}): string {
+    options?: {emitSpans?: boolean}, templateParserOptions?: ParseTemplateOptions): string {
   const codeLines = [`export class Test<T extends string> {}`];
 
   (function addCodeLines(currentDeclarations) {
@@ -290,7 +292,11 @@ export function tcb(
   const sf = getSourceFileOrError(program, rootFilePath);
   const clazz = getClass(sf, 'Test');
   const templateUrl = 'synthetic.html';
-  const {nodes} = parseTemplate(template, templateUrl);
+  const {nodes, errors} = parseTemplate(template, templateUrl, templateParserOptions);
+
+  if (errors !== null) {
+    throw new Error('Template parse errors: \n' + errors.join('\n'));
+  }
 
   const {matcher, pipes} =
       prepareDeclarations(declarations, decl => getClass(sf, decl.name), new Map());
@@ -298,7 +304,8 @@ export function tcb(
   const boundTarget = binder.bind({template: nodes});
 
   const id = 'tcb' as TemplateId;
-  const meta: TypeCheckBlockMetadata = {id, boundTarget, pipes, schemas: [], isStandalone: false};
+  const meta: TypeCheckBlockMetadata =
+      {id, boundTarget, pipes, schemas: [], isStandalone: false, preserveWhitespaces: false};
 
   const fullConfig: TypeCheckingConfig = {
     applyTemplateContextGuards: true,
@@ -502,7 +509,7 @@ export function setup(targets: TypeCheckingTarget[], overrides: {
         };
 
         ctx.addTemplate(
-            classRef, binder, nodes, pipes, [], sourceMapping, templateFile, errors, false);
+            classRef, binder, nodes, pipes, [], sourceMapping, templateFile, errors, false, false);
       }
     }
   });
@@ -673,6 +680,8 @@ function getDirectiveMetaFromDeclaration(
     baseClass: null,
     animationTriggerNames: null,
     decorator: null,
+    ngContentSelectors: decl.ngContentSelectors || null,
+    preserveWhitespaces: decl.preserveWhitespaces ?? false,
     hostDirectives: decl.hostDirectives === undefined ? null : decl.hostDirectives.map(hostDecl => {
       return {
         directive: new Reference(resolveDeclaration(hostDecl.directive)),
@@ -728,6 +737,8 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
         schemas: null,
         decorator: null,
         assumedToExportProviders: false,
+        ngContentSelectors: decl.ngContentSelectors || null,
+        preserveWhitespaces: decl.preserveWhitespaces ?? false,
         hostDirectives:
             decl.hostDirectives === undefined ? null : decl.hostDirectives.map(hostDecl => {
               return {
@@ -794,4 +805,7 @@ export class NoopOobRecorder implements OutOfBandDiagnosticRecorder {
   suboptimalTypeInference(): void {}
   splitTwoWayBinding(): void {}
   missingRequiredInputs(): void {}
+  illegalForLoopTrackAccess(): void {}
+  inaccessibleDeferredTriggerElement(): void {}
+  controlFlowPreventingContentProjection(): void {}
 }

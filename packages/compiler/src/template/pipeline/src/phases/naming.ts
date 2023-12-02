@@ -10,7 +10,6 @@ import {sanitizeIdentifier} from '../../../../parse_util';
 import {hyphenate} from '../../../../render3/view/style_parser';
 import * as ir from '../../ir';
 import {ViewCompilationUnit, type CompilationJob, type CompilationUnit} from '../compilation';
-import {prefixWithNamespace} from '../conversion';
 
 /**
  * Generate names for functions and variables across all views.
@@ -18,10 +17,10 @@ import {prefixWithNamespace} from '../conversion';
  * This includes propagating those names into any `ir.ReadVariableExpr`s of those variables, so that
  * the reads can be emitted correctly.
  */
-export function phaseNaming(cpl: CompilationJob): void {
+export function nameFunctionsAndVariables(job: CompilationJob): void {
   addNamesToView(
-      cpl.root, cpl.componentName, {index: 0},
-      cpl.compatibility === ir.CompatibilityMode.TemplateDefinitionBuilder);
+      job.root, job.componentName, {index: 0},
+      job.compatibility === ir.CompatibilityMode.TemplateDefinitionBuilder);
 }
 
 function addNamesToView(
@@ -37,40 +36,63 @@ function addNamesToView(
   for (const op of unit.ops()) {
     switch (op.kind) {
       case ir.OpKind.Property:
+      case ir.OpKind.HostProperty:
         if (op.isAnimationTrigger) {
           op.name = '@' + op.name;
         }
         break;
       case ir.OpKind.Listener:
-        if (op.handlerFnName === null) {
-          if (op.slot === null) {
-            throw new Error(`Expected a slot to be assigned`);
-          }
-          const safeTagName = op.tag.replace('-', '_');
-          if (op.isAnimationListener) {
-            op.handlerFnName = sanitizeIdentifier(`${unit.fnName}_${safeTagName}_animation_${
-                op.name}_${op.animationPhase}_${op.slot}_listener`);
-            op.name = `@${op.name}.${op.animationPhase}`;
-          } else {
-            op.handlerFnName =
-                sanitizeIdentifier(`${unit.fnName}_${safeTagName}_${op.name}_${op.slot}_listener`);
-          }
+        if (op.handlerFnName !== null) {
+          break;
         }
+        if (!op.hostListener && op.targetSlot.slot === null) {
+          throw new Error(`Expected a slot to be assigned`);
+        }
+        let animation = '';
+        if (op.isAnimationListener) {
+          op.name = `@${op.name}.${op.animationPhase}`;
+          animation = 'animation';
+        }
+        if (op.hostListener) {
+          op.handlerFnName = `${baseName}_${animation}${op.name}_HostBindingHandler`;
+        } else {
+          op.handlerFnName = `${unit.fnName}_${op.tag!.replace('-', '_')}_${animation}${op.name}_${
+              op.targetSlot.slot}_listener`;
+        }
+        op.handlerFnName = sanitizeIdentifier(op.handlerFnName);
         break;
       case ir.OpKind.Variable:
         varNames.set(op.xref, getVariableName(op.variable, state));
+        break;
+      case ir.OpKind.RepeaterCreate:
+        if (!(unit instanceof ViewCompilationUnit)) {
+          throw new Error(`AssertionError: must be compiling a component`);
+        }
+        if (op.handle.slot === null) {
+          throw new Error(`Expected slot to be assigned`);
+        }
+        if (op.emptyView !== null) {
+          const emptyView = unit.job.views.get(op.emptyView)!;
+          // Repeater empty view function is at slot +2 (metadata is in the first slot).
+          addNamesToView(
+              emptyView, `${baseName}_${`${op.functionNameSuffix}Empty`}_${op.handle.slot + 2}`,
+              state, compatibility);
+        }
+        // Repeater primary view function is at slot +1 (metadata is in the first slot).
+        addNamesToView(
+            unit.job.views.get(op.xref)!,
+            `${baseName}_${op.functionNameSuffix}_${op.handle.slot + 1}`, state, compatibility);
         break;
       case ir.OpKind.Template:
         if (!(unit instanceof ViewCompilationUnit)) {
           throw new Error(`AssertionError: must be compiling a component`);
         }
         const childView = unit.job.views.get(op.xref)!;
-        if (op.slot === null) {
+        if (op.handle.slot === null) {
           throw new Error(`Expected slot to be assigned`);
         }
-        addNamesToView(
-            childView, `${baseName}_${prefixWithNamespace(op.tag, op.namespace)}_${op.slot}`, state,
-            compatibility);
+        const suffix = op.functionNameSuffix.length === 0 ? '' : `_${op.functionNameSuffix}`;
+        addNamesToView(childView, `${baseName}${suffix}_${op.handle.slot}`, state, compatibility);
         break;
       case ir.OpKind.StyleProp:
         op.name = normalizeStylePropName(op.name);
@@ -108,10 +130,12 @@ function getVariableName(variable: ir.SemanticVariable, state: {index: number}):
         variable.name = `ctx_r${state.index++}`;
         break;
       case ir.SemanticVariableKind.Identifier:
-        variable.name = `${variable.identifier}_${state.index++}`;
+        // TODO: Prefix increment and `_r` for compatiblity only.
+        variable.name = `${variable.identifier}_r${++state.index}`;
         break;
       default:
-        variable.name = `_r${state.index++}`;
+        // TODO: Prefix increment for compatibility only.
+        variable.name = `_r${++state.index}`;
         break;
     }
   }

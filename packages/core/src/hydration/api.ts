@@ -6,10 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {first} from 'rxjs/operators';
-
-import {APP_BOOTSTRAP_LISTENER, ApplicationRef} from '../application_ref';
-import {ENABLED_SSR_FEATURES} from '../application_tokens';
+import {APP_BOOTSTRAP_LISTENER, ApplicationRef, whenStable} from '../application_ref';
 import {Console} from '../console';
 import {ENVIRONMENT_INITIALIZER, EnvironmentProviders, Injector, makeEnvironmentProviders} from '../di';
 import {inject} from '../di/injector_compatibility';
@@ -23,6 +20,7 @@ import {enableLocateOrCreateTextNodeImpl} from '../render3/instructions/text';
 import {getDocument} from '../render3/interfaces/document';
 import {isPlatformBrowser} from '../render3/util/misc_utils';
 import {TransferState} from '../transfer_state';
+import {performanceMarkFeature} from '../util/performance';
 import {NgZone} from '../zone';
 
 import {cleanupDehydratedViews} from './cleanup';
@@ -75,7 +73,6 @@ function printHydrationStats(injector: Injector) {
   const message = `Angular hydrated ${ngDevMode!.hydratedComponents} component(s) ` +
       `and ${ngDevMode!.hydratedNodes} node(s), ` +
       `${ngDevMode!.componentsSkippedHydration} component(s) were skipped. ` +
-      `Note: this feature is in Developer Preview mode. ` +
       `Learn more at https://angular.io/guide/hydration.`;
   // tslint:disable-next-line:no-console
   console.log(message);
@@ -85,8 +82,8 @@ function printHydrationStats(injector: Injector) {
 /**
  * Returns a Promise that is resolved when an application becomes stable.
  */
-function whenStable(appRef: ApplicationRef, injector: Injector): Promise<void> {
-  const isStablePromise = appRef.isStable.pipe(first((isStable: boolean) => isStable)).toPromise();
+function whenStableWithTimeout(appRef: ApplicationRef, injector: Injector): Promise<void> {
+  const whenStablePromise = whenStable(appRef);
   if (typeof ngDevMode !== 'undefined' && ngDevMode) {
     const timeoutTime = APPLICATION_IS_STABLE_TIMEOUT;
     const console = injector.get(Console);
@@ -99,10 +96,10 @@ function whenStable(appRef: ApplicationRef, injector: Injector): Promise<void> {
       return setTimeout(() => logWarningOnStableTimedout(timeoutTime, console), timeoutTime);
     });
 
-    isStablePromise.finally(() => clearTimeout(timeoutId));
+    whenStablePromise.finally(() => clearTimeout(timeoutId));
   }
 
-  return isStablePromise.then(() => {});
+  return whenStablePromise;
 }
 
 /**
@@ -140,7 +137,7 @@ export function withDomHydration(): EnvironmentProviders {
           }
         }
         if (isEnabled) {
-          inject(ENABLED_SSR_FEATURES).add('hydration');
+          performanceMarkFeature('NgHydration');
         }
         return isEnabled;
       },
@@ -177,11 +174,15 @@ export function withDomHydration(): EnvironmentProviders {
           const appRef = inject(ApplicationRef);
           const injector = inject(Injector);
           return () => {
-            whenStable(appRef, injector).then(() => {
-              // Wait until an app becomes stable and cleanup all views that
-              // were not claimed during the application bootstrap process.
-              // The timing is similar to when we start the serialization process
-              // on the server.
+            // Wait until an app becomes stable and cleanup all views that
+            // were not claimed during the application bootstrap process.
+            // The timing is similar to when we start the serialization process
+            // on the server.
+            //
+            // Note: the cleanup task *MUST* be scheduled within the Angular zone
+            // to ensure that change detection is properly run afterward.
+            whenStableWithTimeout(appRef, injector).then(() => {
+              NgZone.assertInAngularZone();
               cleanupDehydratedViews(appRef);
 
               if (typeof ngDevMode !== 'undefined' && ngDevMode) {
@@ -237,7 +238,7 @@ function verifySsrContentsIntegrity(): void {
         typeof ngDevMode !== 'undefined' && ngDevMode &&
             'Angular hydration logic detected that HTML content of this page was modified after it ' +
                 'was produced during server side rendering. Make sure that there are no optimizations ' +
-                'that remove comment nodes from HTML are enabled on your CDN. Angular hydration ' +
+                'that remove comment nodes from HTML enabled on your CDN. Angular hydration ' +
                 'relies on HTML produced by the server, including whitespaces and comment nodes.');
   }
 }

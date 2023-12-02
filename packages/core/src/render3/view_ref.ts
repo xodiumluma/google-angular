@@ -8,7 +8,7 @@
 
 import {ChangeDetectorRef} from '../change_detection/change_detector_ref';
 import {RuntimeError, RuntimeErrorCode} from '../errors';
-import {EmbeddedViewRef, InternalViewRef, ViewRefTracker} from '../linker/view_ref';
+import {EmbeddedViewRef, ViewRefTracker} from '../linker/view_ref';
 import {removeFromArray} from '../util/array_utils';
 import {assertEqual} from '../util/assert';
 
@@ -19,7 +19,7 @@ import {CONTAINER_HEADER_OFFSET, VIEW_REFS} from './interfaces/container';
 import {isLContainer} from './interfaces/type_checks';
 import {CONTEXT, FLAGS, LView, LViewFlags, PARENT, TVIEW} from './interfaces/view';
 import {destroyLView, detachView, detachViewFromDOM} from './node_manipulation';
-import {storeLViewOnDestroy} from './util/view_utils';
+import {storeLViewOnDestroy, updateAncestorTraversalFlagsOnAttach} from './util/view_utils';
 
 
 // Needed due to tsickle downleveling where multiple `implements` with classes creates
@@ -27,7 +27,7 @@ import {storeLViewOnDestroy} from './util/view_utils';
 // the multiple @extends by making the annotation @implements instead
 interface ChangeDetectorRefInterface extends ChangeDetectorRef {}
 
-export class ViewRef<T> implements EmbeddedViewRef<T>, InternalViewRef, ChangeDetectorRefInterface {
+export class ViewRef<T> implements EmbeddedViewRef<T>, ChangeDetectorRefInterface {
   private _appRef: ViewRefTracker|null = null;
   private _attachedToViewContainer = false;
 
@@ -57,13 +57,25 @@ export class ViewRef<T> implements EmbeddedViewRef<T>, InternalViewRef, ChangeDe
        *
        * This may be different from `_lView` if the `_cdRefInjectingView` is an embedded view.
        */
-      private _cdRefInjectingView?: LView) {}
+      private _cdRefInjectingView?: LView, private readonly notifyErrorHandler = true) {}
 
   get context(): T {
     return this._lView[CONTEXT] as unknown as T;
   }
 
+  /**
+   * @deprecated Replacing the full context object is not supported. Modify the context
+   *   directly, or consider using a `Proxy` if you need to replace the full object.
+   * // TODO(devversion): Remove this.
+   */
   set context(value: T) {
+    if (ngDevMode) {
+      // Note: We have a warning message here because the `@deprecated` JSDoc will not be picked
+      // up for assignments on the setter. We want to let users know about the deprecated usage.
+      console.warn(
+          'Angular: Replacing the `context` object of an `EmbeddedViewRef` is deprecated.');
+    }
+
     this._lView[CONTEXT] = value as unknown as {};
   }
 
@@ -246,6 +258,7 @@ export class ViewRef<T> implements EmbeddedViewRef<T>, InternalViewRef, ChangeDe
    * ```
    */
   reattach(): void {
+    updateAncestorTraversalFlagsOnAttach(this._lView);
     this._lView[FLAGS] |= LViewFlags.Attached;
   }
 
@@ -271,7 +284,7 @@ export class ViewRef<T> implements EmbeddedViewRef<T>, InternalViewRef, ChangeDe
    * See {@link ChangeDetectorRef#detach} for more information.
    */
   detectChanges(): void {
-    detectChangesInternal(this._lView[TVIEW], this._lView, this.context as unknown as {});
+    detectChangesInternal(this._lView, this.notifyErrorHandler);
   }
 
   /**
@@ -282,7 +295,7 @@ export class ViewRef<T> implements EmbeddedViewRef<T>, InternalViewRef, ChangeDe
    */
   checkNoChanges(): void {
     if (ngDevMode) {
-      checkNoChangesInternal(this._lView[TVIEW], this._lView, this.context as unknown as {});
+      checkNoChangesInternal(this._lView, this.notifyErrorHandler);
     }
   }
 
@@ -307,32 +320,5 @@ export class ViewRef<T> implements EmbeddedViewRef<T>, InternalViewRef, ChangeDe
           ngDevMode && 'This view is already attached to a ViewContainer!');
     }
     this._appRef = appRef;
-  }
-}
-
-/** @internal */
-export class RootViewRef<T> extends ViewRef<T> {
-  constructor(public _view: LView) {
-    super(_view);
-  }
-
-  override detectChanges(): void {
-    const lView = this._view;
-    const tView = lView[TVIEW];
-    const context = lView[CONTEXT];
-    detectChangesInternal(tView, lView, context, false);
-  }
-
-  override checkNoChanges(): void {
-    if (ngDevMode) {
-      const lView = this._view;
-      const tView = lView[TVIEW];
-      const context = lView[CONTEXT];
-      checkNoChangesInternal(tView, lView, context, false);
-    }
-  }
-
-  override get context(): T {
-    return null!;
   }
 }

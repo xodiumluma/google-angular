@@ -10,7 +10,7 @@ import {SecurityContext} from '../../../../core';
 import {isIframeSecuritySensitiveAttr} from '../../../../schema/dom_security_schema';
 import * as ir from '../../ir';
 import {ComponentCompilationJob} from '../compilation';
-import {getElementsByXrefId} from '../util/elements';
+import {createOpXrefMap} from '../util/elements';
 
 /**
  * Mapping of security contexts to sanitizer function for that context.
@@ -24,11 +24,11 @@ const sanitizers = new Map<SecurityContext, ir.SanitizerFn|null>([
 /**
  * Resolves sanitization functions for ops that need them.
  */
-export function phaseResolveSanitizers(cpl: ComponentCompilationJob): void {
-  for (const [_, view] of cpl.views) {
-    const elements = getElementsByXrefId(view);
+export function resolveSanitizers(job: ComponentCompilationJob): void {
+  for (const unit of job.units) {
+    const elements = createOpXrefMap(unit);
     let sanitizerFn: ir.SanitizerFn|null;
-    for (const op of view.update) {
+    for (const op of unit.update) {
       switch (op.kind) {
         case ir.OpKind.Property:
         case ir.OpKind.Attribute:
@@ -40,7 +40,7 @@ export function phaseResolveSanitizers(cpl: ComponentCompilationJob): void {
           // <iframe>).
           if (op.sanitizer === null) {
             const ownerOp = elements.get(op.target);
-            if (ownerOp === undefined) {
+            if (ownerOp === undefined || !ir.isElementOrContainerOp(ownerOp)) {
               throw Error('Property should have an element-like owner');
             }
             if (isIframeElement(ownerOp) && isIframeSecuritySensitiveAttr(op.name)) {
@@ -57,6 +57,5 @@ export function phaseResolveSanitizers(cpl: ComponentCompilationJob): void {
  * Checks whether the given op represents an iframe element.
  */
 function isIframeElement(op: ir.ElementOrContainerOps): boolean {
-  return (op.kind === ir.OpKind.Element || op.kind === ir.OpKind.ElementStart) &&
-      op.tag.toLowerCase() === 'iframe';
+  return op.kind === ir.OpKind.ElementStart && op.tag?.toLowerCase() === 'iframe';
 }

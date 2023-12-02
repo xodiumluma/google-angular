@@ -15,10 +15,19 @@
     "name": "AbsoluteRedirect"
   },
   {
+    "name": "ActivateRoutes"
+  },
+  {
     "name": "ActivatedRoute"
   },
   {
     "name": "ActivatedRouteSnapshot"
+  },
+  {
+    "name": "ActivationEnd"
+  },
+  {
+    "name": "ActivationStart"
   },
   {
     "name": "AfterRenderEventManager"
@@ -31,6 +40,9 @@
   },
   {
     "name": "ApplicationRef"
+  },
+  {
+    "name": "ApplyRedirects"
   },
   {
     "name": "ArgumentOutOfRangeError"
@@ -49,6 +61,9 @@
   },
   {
     "name": "BaseRouteReuseStrategy"
+  },
+  {
+    "name": "BeforeActivateRoutes"
   },
   {
     "name": "BehaviorSubject"
@@ -72,6 +87,9 @@
     "name": "CONTAINER_HEADER_OFFSET"
   },
   {
+    "name": "CREATE_VIEW_TRANSITION"
+  },
+  {
     "name": "CSP_NONCE"
   },
   {
@@ -87,10 +105,19 @@
     "name": "CatchSubscriber"
   },
   {
+    "name": "ChainedInjector"
+  },
+  {
     "name": "ChangeDetectionStrategy"
   },
   {
     "name": "ChangeDetectorRef"
+  },
+  {
+    "name": "ChildActivationEnd"
+  },
+  {
+    "name": "ChildActivationStart"
   },
   {
     "name": "ChildrenOutletContexts"
@@ -165,6 +192,9 @@
     "name": "DefaultUrlSerializer"
   },
   {
+    "name": "DistinctUntilChangedOperator"
+  },
+  {
     "name": "DistinctUntilChangedSubscriber"
   },
   {
@@ -195,9 +225,6 @@
     "name": "EVENT_MANAGER_PLUGINS"
   },
   {
-    "name": "EffectManager"
-  },
-  {
     "name": "ElementRef"
   },
   {
@@ -225,6 +252,9 @@
     "name": "EventManagerPlugin"
   },
   {
+    "name": "EventType"
+  },
+  {
     "name": "FilterOperator"
   },
   {
@@ -246,7 +276,7 @@
     "name": "GuardsCheckStart"
   },
   {
-    "name": "HAS_TRANSPLANTED_VIEWS"
+    "name": "HistoryStateManager"
   },
   {
     "name": "INITIAL_NAVIGATION"
@@ -291,6 +321,9 @@
     "name": "ItemComponent"
   },
   {
+    "name": "LContainerFlags"
+  },
+  {
     "name": "LOCALE_ID2"
   },
   {
@@ -333,6 +366,9 @@
     "name": "MapSubscriber"
   },
   {
+    "name": "MapToOperator"
+  },
+  {
     "name": "MapToSubscriber"
   },
   {
@@ -340,6 +376,9 @@
   },
   {
     "name": "MergeMapSubscriber"
+  },
+  {
+    "name": "ModuleWithComponentFactories"
   },
   {
     "name": "NAMESPACE_URIS"
@@ -393,9 +432,6 @@
     "name": "NONE"
   },
   {
-    "name": "NOOP_CLEANUP_FN"
-  },
-  {
     "name": "NOT_FOUND"
   },
   {
@@ -420,6 +456,9 @@
     "name": "NavigationCancel"
   },
   {
+    "name": "NavigationCancellationCode"
+  },
+  {
     "name": "NavigationEnd"
   },
   {
@@ -430,6 +469,9 @@
   },
   {
     "name": "NavigationSkipped"
+  },
+  {
+    "name": "NavigationSkippedCode"
   },
   {
     "name": "NavigationStart"
@@ -459,6 +501,9 @@
     "name": "NgZoneChangeDetectionScheduler"
   },
   {
+    "name": "NoLeftoversInUrl"
+  },
+  {
     "name": "NoMatch"
   },
   {
@@ -483,6 +528,9 @@
     "name": "OuterSubscriber"
   },
   {
+    "name": "OutletContext"
+  },
+  {
     "name": "OutletInjector"
   },
   {
@@ -499,6 +547,9 @@
   },
   {
     "name": "PRIMARY_OUTLET"
+  },
+  {
+    "name": "ParamsAsMap"
   },
   {
     "name": "PathLocationStrategy"
@@ -528,6 +579,9 @@
     "name": "R3ViewContainerRef"
   },
   {
+    "name": "REACTIVE_LVIEW_CONSUMER_NODE"
+  },
+  {
     "name": "REMOVE_STYLES_ON_COMPONENT_DESTROY"
   },
   {
@@ -543,10 +597,10 @@
     "name": "ROUTES"
   },
   {
-    "name": "ReactiveLViewConsumer"
+    "name": "Recognizer"
   },
   {
-    "name": "ReactiveNode"
+    "name": "RedirectRequest"
   },
   {
     "name": "RefCountOperator"
@@ -570,7 +624,10 @@
     "name": "ResolveStart"
   },
   {
-    "name": "RootViewRef"
+    "name": "RouteConfigLoadEnd"
+  },
+  {
+    "name": "RouteConfigLoadStart"
   },
   {
     "name": "RouteReuseStrategy"
@@ -627,6 +684,9 @@
     "name": "Sanitizer"
   },
   {
+    "name": "ScanOperator"
+  },
+  {
     "name": "ScanSubscriber"
   },
   {
@@ -649,6 +709,9 @@
   },
   {
     "name": "StandaloneService"
+  },
+  {
+    "name": "StateManager"
   },
   {
     "name": "Subject"
@@ -681,6 +744,9 @@
     "name": "TQueries_"
   },
   {
+    "name": "TQueryMetadata_"
+  },
+  {
     "name": "TQuery_"
   },
   {
@@ -700,6 +766,12 @@
   },
   {
     "name": "TakeSubscriber"
+  },
+  {
+    "name": "TakeUntilOperator"
+  },
+  {
+    "name": "TakeUntilSubscriber"
   },
   {
     "name": "TapSubscriber"
@@ -768,12 +840,6 @@
     "name": "ViewRef"
   },
   {
-    "name": "Watch"
-  },
-  {
-    "name": "WeakRefImpl"
-  },
-  {
     "name": "XSS_SECURITY_URL"
   },
   {
@@ -822,9 +888,6 @@
     "name": "_locateOrCreateTextNode"
   },
   {
-    "name": "_nextReactiveId"
-  },
-  {
     "name": "_platformInjector"
   },
   {
@@ -841,9 +904,6 @@
   },
   {
     "name": "_wrapInTimeout"
-  },
-  {
-    "name": "absoluteRedirect"
   },
   {
     "name": "activeConsumer"
@@ -891,6 +951,9 @@
     "name": "applyView"
   },
   {
+    "name": "assertConsumerNode"
+  },
+  {
     "name": "attachPatchData"
   },
   {
@@ -927,19 +990,16 @@
     "name": "cleanUpView"
   },
   {
-    "name": "clearViewRefreshFlag"
+    "name": "collectNativeNodes"
   },
   {
-    "name": "collectNativeNodes"
+    "name": "collectNativeNodesInLContainer"
   },
   {
     "name": "collectQueryResults"
   },
   {
     "name": "combineLatest"
-  },
-  {
-    "name": "commitLViewConsumerIfHasProducers"
   },
   {
     "name": "compare"
@@ -964,6 +1024,12 @@
   },
   {
     "name": "connectableObservableDescriptor"
+  },
+  {
+    "name": "consumerIsLive"
+  },
+  {
+    "name": "consumerPollProducersForChange"
   },
   {
     "name": "containsSegmentGroup"
@@ -1041,9 +1107,6 @@
     "name": "createUrlTreeFromSegmentGroup"
   },
   {
-    "name": "currentConsumer"
-  },
-  {
     "name": "deactivateRouteAndItsChildren"
   },
   {
@@ -1066,9 +1129,6 @@
   },
   {
     "name": "defaultIfEmpty"
-  },
-  {
-    "name": "defaultMalformedUriErrorHandler"
   },
   {
     "name": "defaultUrlMatcher"
@@ -1098,7 +1158,7 @@
     "name": "detectChangesInView"
   },
   {
-    "name": "detectChangesInternal"
+    "name": "detectChangesInViewIfAttached"
   },
   {
     "name": "diPublicInInjector"
@@ -1132,6 +1192,9 @@
   },
   {
     "name": "enterView"
+  },
+  {
+    "name": "epoch"
   },
   {
     "name": "equalArraysOrString"
@@ -1188,6 +1251,9 @@
     "name": "first"
   },
   {
+    "name": "flattenRouteTree"
+  },
+  {
     "name": "flattenUnsubscriptionErrors"
   },
   {
@@ -1195,6 +1261,9 @@
   },
   {
     "name": "forwardRef"
+  },
+  {
+    "name": "freeConsumers"
   },
   {
     "name": "from"
@@ -1251,7 +1320,7 @@
     "name": "getDOM"
   },
   {
-    "name": "getData"
+    "name": "getDataKeys"
   },
   {
     "name": "getDeclarationTNode"
@@ -1273,6 +1342,9 @@
   },
   {
     "name": "getIdxOfMatchingSelector"
+  },
+  {
+    "name": "getInherited"
   },
   {
     "name": "getInjectableDef"
@@ -1312,9 +1384,6 @@
   },
   {
     "name": "getOrCreateComponentTView"
-  },
-  {
-    "name": "getOrCreateCurrentLViewConsumer"
   },
   {
     "name": "getOrCreateInjectable"
@@ -1362,12 +1431,6 @@
     "name": "getPromiseCtor"
   },
   {
-    "name": "getReactiveLViewConsumer"
-  },
-  {
-    "name": "getResolve"
-  },
-  {
     "name": "getSanitizer"
   },
   {
@@ -1404,6 +1467,9 @@
     "name": "hasEmptyPathConfig"
   },
   {
+    "name": "hasInSkipHydrationBlockFlag"
+  },
+  {
     "name": "hasParentInjector"
   },
   {
@@ -1425,16 +1491,10 @@
     "name": "importProvidersFrom"
   },
   {
-    "name": "inNotificationPhase"
-  },
-  {
     "name": "includeViewProviders"
   },
   {
     "name": "incrementInitPhaseFlags"
-  },
-  {
-    "name": "inheritedParamsDataResolve"
   },
   {
     "name": "initFeatures"
@@ -1495,9 +1555,6 @@
   },
   {
     "name": "isArrayLike"
-  },
-  {
-    "name": "isBrowserTriggeredNavigation"
   },
   {
     "name": "isCommandWithOutlets"
@@ -1575,9 +1632,6 @@
     "name": "isPromise2"
   },
   {
-    "name": "isRedirectingNavigationCancelingError"
-  },
-  {
     "name": "isScheduler"
   },
   {
@@ -1635,6 +1689,9 @@
     "name": "map"
   },
   {
+    "name": "markAncestorsForTraversal"
+  },
+  {
     "name": "markAsComponentHost"
   },
   {
@@ -1642,6 +1699,9 @@
   },
   {
     "name": "markViewForRefresh"
+  },
+  {
+    "name": "markedFeatures"
   },
   {
     "name": "match"
@@ -1767,13 +1827,16 @@
     "name": "processInjectorTypesWithProviders"
   },
   {
+    "name": "producerRemoveLiveConsumerAtIndex"
+  },
+  {
+    "name": "producerUpdateValueVersion"
+  },
+  {
     "name": "profiler"
   },
   {
     "name": "provideZoneChangeDetection"
-  },
-  {
-    "name": "recognize2"
   },
   {
     "name": "redirectIfUrlTree"
@@ -1815,10 +1878,10 @@
     "name": "replaceSegment"
   },
   {
-    "name": "resetPreOrderHookFlags"
+    "name": "requiresRefreshOrTraversal"
   },
   {
-    "name": "resolveData"
+    "name": "resetPreOrderHookFlags"
   },
   {
     "name": "resolveForwardRef"
@@ -1831,6 +1894,9 @@
   },
   {
     "name": "routes"
+  },
+  {
+    "name": "runInInjectionContext"
   },
   {
     "name": "rxSubscriber"
@@ -1914,6 +1980,9 @@
     "name": "shimStylesContent"
   },
   {
+    "name": "shouldAddViewToDom"
+  },
+  {
     "name": "shouldSearchParent"
   },
   {
@@ -1968,7 +2037,7 @@
     "name": "tap"
   },
   {
-    "name": "throwError5"
+    "name": "throwError2"
   },
   {
     "name": "throwIfEmpty"
@@ -1998,6 +2067,9 @@
     "name": "unwrapSafeValue"
   },
   {
+    "name": "updateAncestorTraversalFlagsOnAttach"
+  },
+  {
     "name": "updateMicroTaskStatus"
   },
   {
@@ -2007,10 +2079,7 @@
     "name": "updateSegmentGroupChildren"
   },
   {
-    "name": "updateViewsToRefresh"
-  },
-  {
-    "name": "urlParsingNode"
+    "name": "viewAttachedToChangeDetector"
   },
   {
     "name": "walkProviderTree"
@@ -2065,6 +2134,9 @@
   },
   {
     "name": "ɵɵelementStart"
+  },
+  {
+    "name": "ɵɵgetInheritedFactory"
   },
   {
     "name": "ɵɵinject"

@@ -88,7 +88,6 @@ function setup(
       /* enableI18nLegacyMessageIdFormat */ false,
       !!usePoisonedData,
       /* i18nNormalizeLineEndingsInICUs */ false,
-      /* enabledBlockTypes */ new Set(),
       moduleResolver,
       cycleAnalyzer,
       CycleHandlingStrategy.UseRemoteScoping,
@@ -103,6 +102,8 @@ function setup(
       true,
       compilationMode,
       new DeferredSymbolTracker(checker),
+      /* forbidOrphanRenderering */ false,
+      /* enableBlockSyntax */ true,
   );
   return {reflectionHost, handler, resourceLoader, metaRegistry};
 }

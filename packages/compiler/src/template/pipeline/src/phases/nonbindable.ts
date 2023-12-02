@@ -6,9 +6,8 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import * as o from '../../../../output/output_ast';
 import * as ir from '../../ir';
-import type {ComponentCompilationJob} from '../compilation';
+import type {CompilationJob} from '../compilation';
 
 /**
  * Looks up an element in the given map by xref ID.
@@ -27,7 +26,7 @@ function lookupElement(
  * all descendants of that container. Therefore, we must emit `disableBindings` and `enableBindings`
  * instructions for every such container.
  */
-export function phaseNonbindable(job: ComponentCompilationJob): void {
+export function disableBindings(job: CompilationJob): void {
   const elements = new Map<ir.XrefId, ir.ElementOrContainerOps>();
   for (const view of job.units) {
     for (const op of view.create) {
@@ -38,8 +37,8 @@ export function phaseNonbindable(job: ComponentCompilationJob): void {
     }
   }
 
-  for (const [_, view] of job.views) {
-    for (const op of view.create) {
+  for (const unit of job.units) {
+    for (const op of unit.create) {
       if ((op.kind === ir.OpKind.ElementStart || op.kind === ir.OpKind.ContainerStart) &&
           op.nonBindable) {
         ir.OpList.insertAfter<ir.CreateOp>(ir.createDisableBindingsOp(op.xref), op);

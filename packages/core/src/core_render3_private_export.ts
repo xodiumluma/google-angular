@@ -52,7 +52,6 @@ export {
   ComponentRef as ɵRender3ComponentRef,
   ComponentType as ɵComponentType,
   CssSelectorList as ɵCssSelectorList,
-  detectChanges as ɵdetectChanges,
   DirectiveDef as ɵDirectiveDef,
   DirectiveType as ɵDirectiveType,
   getDirectives as ɵgetDirectives,
@@ -65,8 +64,13 @@ export {
   PipeDef as ɵPipeDef,
   RenderFlags as ɵRenderFlags,
   setClassMetadata as ɵsetClassMetadata,
+  setClassMetadataAsync as ɵsetClassMetadataAsync,
+  ɵsetClassDebugInfo,
   setLocaleId as ɵsetLocaleId,
   store as ɵstore,
+  ɵDeferBlockDependencyInterceptor,
+  ɵDEFER_BLOCK_DEPENDENCY_INTERCEPTOR,
+  ɵDEFER_BLOCK_CONFIG,
   ɵɵadvance,
   ɵɵattribute,
   ɵɵattributeInterpolate1,
@@ -90,7 +94,9 @@ export {
   ɵɵclassMapInterpolateV,
   ɵɵclassProp,
   ɵɵComponentDeclaration,
+  ɵɵconditional,
   ɵɵcontentQuery,
+  ɵɵcomponentInstance,
   ɵɵCopyDefinitionFeature,
   ɵɵdefineComponent,
   ɵɵdefineDirective,
@@ -170,8 +176,14 @@ export {
   ɵɵresolveWindow,
   ɵɵrestoreView,
 
+  ɵɵrepeater,
+  ɵɵrepeaterCreate,
+  ɵɵrepeaterTrackByIdentity,
+  ɵɵrepeaterTrackByIndex,
+
   ɵɵsetComponentScope,
   ɵɵsetNgModuleScope,
+  ɵɵgetComponentDepsFactory,
   ɵɵStandaloneFeature,
   ɵɵstyleMap,
   ɵɵstyleMapInterpolate1,
@@ -198,6 +210,21 @@ export {
   ɵɵtemplate,
   ɵɵtemplateRefExtractor,
   ɵɵdefer,
+  ɵɵdeferWhen,
+  ɵɵdeferOnIdle,
+  ɵɵdeferOnImmediate,
+  ɵɵdeferOnTimer,
+  ɵɵdeferOnHover,
+  ɵɵdeferOnInteraction,
+  ɵɵdeferOnViewport,
+  ɵɵdeferPrefetchWhen,
+  ɵɵdeferPrefetchOnIdle,
+  ɵɵdeferPrefetchOnImmediate,
+  ɵɵdeferPrefetchOnTimer,
+  ɵɵdeferPrefetchOnHover,
+  ɵɵdeferPrefetchOnInteraction,
+  ɵɵdeferPrefetchOnViewport,
+  ɵɵdeferEnableTimerScheduling,
   ɵɵtext,
   ɵɵtextInterpolate,
   ɵɵtextInterpolate1,
@@ -215,6 +242,9 @@ export {
   ɵgetUnknownPropertyStrictMode,
   ɵsetUnknownPropertyStrictMode
 } from './render3/index';
+export {
+  CONTAINER_HEADER_OFFSET as ɵCONTAINER_HEADER_OFFSET,
+} from './render3/interfaces/container';
 export {
   LContext as ɵLContext,
 } from './render3/interfaces/context';
@@ -282,6 +312,9 @@ export {
 export {
   noSideEffects as ɵnoSideEffects,
 } from './util/closure';
-export { AfterRenderEventManager as ɵAfterRenderEventManager } from './render3/after_render_hooks';
+export { AfterRenderEventManager as ɵAfterRenderEventManager, internalAfterNextRender as ɵinternalAfterNextRender } from './render3/after_render_hooks';
+export {depsTracker as ɵdepsTracker, USE_RUNTIME_DEPS_TRACKER_FOR_JIT as ɵUSE_RUNTIME_DEPS_TRACKER_FOR_JIT} from './render3/deps_tracker/deps_tracker';
+export {generateStandaloneInDeclarationsError as ɵgenerateStandaloneInDeclarationsError} from './render3/jit/module';
+export {getAsyncClassMetadataFn as ɵgetAsyncClassMetadataFn} from './render3/metadata';
 
 // clang-format on

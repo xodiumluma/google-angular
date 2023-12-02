@@ -17,8 +17,8 @@ import {CompilationJob, CompilationUnit, ViewCompilationUnit} from '../compilati
  * Also matches `ir.RestoreViewExpr` expressions with the variables of their corresponding saved
  * views.
  */
-export function phaseResolveNames(cpl: CompilationJob): void {
-  for (const unit of cpl.units) {
+export function resolveNames(job: CompilationJob): void {
+  for (const unit of job.units) {
     processLexicalScope(unit, unit.create, null);
     processLexicalScope(unit, unit.update, null);
   }
@@ -42,6 +42,7 @@ function processLexicalScope(
       case ir.OpKind.Variable:
         switch (op.variable.kind) {
           case ir.SemanticVariableKind.Identifier:
+          case ir.SemanticVariableKind.Alias:
             // This variable represents some kind of identifier which can be used in the template.
             if (scope.has(op.variable.identifier)) {
               continue;

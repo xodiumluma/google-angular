@@ -18,7 +18,7 @@ type AssumeEager = typeof AssumeEager;
  *
  * This information is later used to determine whether it's safe to drop
  * a regular import of this symbol (actually the entire import declaration)
- * in favor of using a dynamic import for cases when `{#defer}` blocks are used.
+ * in favor of using a dynamic import for cases when defer blocks are used.
  */
 export class DeferredSymbolTracker {
   private readonly imports =
@@ -44,12 +44,19 @@ export class DeferredSymbolTracker {
       throw new Error(`Provided import declaration doesn't have any symbols.`);
     }
 
+    // If the entire import is a type-only import, none of the symbols can be eager.
+    if (importDecl.importClause.isTypeOnly) {
+      return symbolMap;
+    }
+
     if (importDecl.importClause.namedBindings !== undefined) {
       const bindings = importDecl.importClause.namedBindings;
       if (ts.isNamedImports(bindings)) {
         // Case 1: `import {a, b as B} from 'a'`
         for (const element of bindings.elements) {
-          symbolMap.set(element.name.text, AssumeEager);
+          if (!element.isTypeOnly) {
+            symbolMap.set(element.name.text, AssumeEager);
+          }
         }
       } else {
         // Case 2: `import X from 'a'`
@@ -92,7 +99,7 @@ export class DeferredSymbolTracker {
     const identifiers = symbolMap.get(identifier.text) as Set<ts.Identifier>;
 
     // Drop the current identifier, since we are trying to make it deferrable
-    // (it's used as a dependency in one of the `{#defer}` blocks).
+    // (it's used as a dependency in one of the defer blocks).
     identifiers.delete(identifier);
   }
 

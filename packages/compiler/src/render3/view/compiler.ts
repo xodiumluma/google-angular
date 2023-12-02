@@ -15,7 +15,8 @@ import {ParseError, ParseSourceSpan, sanitizeIdentifier} from '../../parse_util'
 import {isIframeSecuritySensitiveAttr} from '../../schema/dom_security_schema';
 import {CssSelector} from '../../selector';
 import {ShadowCss} from '../../shadow_css';
-import {emitHostBindingFunction, emitTemplateFn, transformHostBinding, transformTemplate} from '../../template/pipeline/src/emit';
+import {CompilationJobKind} from '../../template/pipeline/src/compilation';
+import {emitHostBindingFunction, emitTemplateFn, transform} from '../../template/pipeline/src/emit';
 import {ingestComponent, ingestHostBinding} from '../../template/pipeline/src/ingest';
 import {USE_TEMPLATE_PIPELINE} from '../../template/pipeline/switch';
 import {BindingParser} from '../../template_parser/binding_parser';
@@ -117,6 +118,12 @@ function addFeatures(
       break;
     }
   }
+  // Note: host directives feature needs to be inserted before the
+  // inheritance feature to ensure the correct execution order.
+  if (meta.hostDirectives?.length) {
+    features.push(o.importExpr(R3.HostDirectivesFeature).callFn([createHostDirectivesFeatureArg(
+        meta.hostDirectives)]));
+  }
   if (meta.usesInheritance) {
     features.push(o.importExpr(R3.InheritDefinitionFeature));
   }
@@ -129,10 +136,6 @@ function addFeatures(
   // TODO: better way of differentiating component vs directive metadata.
   if (meta.hasOwnProperty('template') && meta.isStandalone) {
     features.push(o.importExpr(R3.StandaloneFeature));
-  }
-  if (meta.hostDirectives?.length) {
-    features.push(o.importExpr(R3.HostDirectivesFeature).callFn([createHostDirectivesFeatureArg(
-        meta.hostDirectives)]));
   }
   if (features.length) {
     definitionMap.set('features', o.literalArr(features));
@@ -184,8 +187,6 @@ export function compileComponentFromMetadata(
   const templateTypeName = meta.name;
   const templateName = templateTypeName ? `${templateTypeName}_Template` : null;
 
-  const changeDetection = meta.changeDetection;
-
   // Template compilation is currently conditional as we're in the process of rewriting it.
   if (!USE_TEMPLATE_PIPELINE) {
     // This is the main path currently used in compilation, which compiles the template with the
@@ -194,7 +195,8 @@ export function compileComponentFromMetadata(
     const template = meta.template;
     const templateBuilder = new TemplateDefinitionBuilder(
         constantPool, BindingScope.createRootScope(), 0, templateTypeName, null, null, templateName,
-        R3.namespaceHTML, meta.relativeContextFilePath, meta.i18nUseExternalIds, meta.deferBlocks);
+        R3.namespaceHTML, meta.relativeContextFilePath, meta.i18nUseExternalIds, meta.deferBlocks,
+        new Map());
 
     const templateFunctionExpression = templateBuilder.buildTemplateFunction(template.nodes, []);
 
@@ -218,14 +220,14 @@ export function compileComponentFromMetadata(
     // - either as an array:
     //   `consts: [['one', 'two'], ['three', 'four']]`
     // - or as a factory function in case additional statements are present (to support i18n):
-    //   `consts: function() { var i18n_0; if (ngI18nClosureMode) {...} else {...} return [i18n_0];
+    //   `consts: () => { var i18n_0; if (ngI18nClosureMode) {...} else {...} return [i18n_0];
     //   }`
     const {constExpressions, prepareStatements} = templateBuilder.getConsts();
     if (constExpressions.length > 0) {
-      let constsExpr: o.LiteralArrayExpr|o.FunctionExpr = o.literalArr(constExpressions);
+      let constsExpr: o.LiteralArrayExpr|o.ArrowFunctionExpr = o.literalArr(constExpressions);
       // Prepare statements are present - turn `consts` into a function.
       if (prepareStatements.length > 0) {
-        constsExpr = o.fn([], [...prepareStatements, new o.ReturnStatement(constsExpr)]);
+        constsExpr = o.arrowFn([], [...prepareStatements, new o.ReturnStatement(constsExpr)]);
       }
       definitionMap.set('consts', constsExpr);
     }
@@ -234,26 +236,46 @@ export function compileComponentFromMetadata(
   } else {
     // This path compiles the template using the prototype template pipeline. First the template is
     // ingested into IR:
-    const tpl = ingestComponent(meta.name, meta.template.nodes, constantPool);
+    const tpl = ingestComponent(
+        meta.name, meta.template.nodes, constantPool, meta.relativeContextFilePath,
+        meta.i18nUseExternalIds, meta.deferBlocks);
 
     // Then the IR is transformed to prepare it for cod egeneration.
-    transformTemplate(tpl);
+    transform(tpl, CompilationJobKind.Tmpl);
 
     // Finally we emit the template function:
     const templateFn = emitTemplateFn(tpl, constantPool);
+
+    if (tpl.contentSelectors !== null) {
+      definitionMap.set('ngContentSelectors', tpl.contentSelectors);
+    }
+
     definitionMap.set('decls', o.literal(tpl.root.decls as number));
     definitionMap.set('vars', o.literal(tpl.root.vars as number));
     if (tpl.consts.length > 0) {
-      definitionMap.set('consts', o.literalArr(tpl.consts));
+      if (tpl.constsInitializers.length > 0) {
+        definitionMap.set('consts', o.arrowFn([], [
+          ...tpl.constsInitializers, new o.ReturnStatement(o.literalArr(tpl.consts))
+        ]));
+      } else {
+        definitionMap.set('consts', o.literalArr(tpl.consts));
+      }
     }
     definitionMap.set('template', templateFn);
   }
 
-  if (meta.declarations.length > 0) {
+  if (meta.declarationListEmitMode !== DeclarationListEmitMode.RuntimeResolved &&
+      meta.declarations.length > 0) {
     definitionMap.set(
         'dependencies',
         compileDeclarationList(
             o.literalArr(meta.declarations.map(decl => decl.type)), meta.declarationListEmitMode));
+  } else if (meta.declarationListEmitMode === DeclarationListEmitMode.RuntimeResolved) {
+    const args = [meta.type.value];
+    if (meta.rawImports) {
+      args.push(meta.rawImports);
+    }
+    definitionMap.set('dependencies', o.importExpr(R3.getComponentDepsFactory).callFn(args));
   }
 
   if (meta.encapsulation === null) {
@@ -291,9 +313,17 @@ export function compileComponentFromMetadata(
         'data', o.literalMap([{key: 'animation', value: meta.animations, quoted: false}]));
   }
 
-  // Only set the change detection flag if it's defined and it's not the default.
-  if (changeDetection != null && changeDetection !== core.ChangeDetectionStrategy.Default) {
-    definitionMap.set('changeDetection', o.literal(changeDetection));
+  // Setting change detection flag
+  if (meta.changeDetection !== null) {
+    if (typeof meta.changeDetection === 'number' &&
+        meta.changeDetection !== core.ChangeDetectionStrategy.Default) {
+      // changeDetection is resolved during analysis. Only set it if not the default.
+      definitionMap.set('changeDetection', o.literal(meta.changeDetection));
+    } else if (typeof meta.changeDetection === 'object') {
+      // changeDetection is not resolved during analysis (e.g., we are in local compilation mode).
+      // So place it as is.
+      definitionMap.set('changeDetection', meta.changeDetection);
+    }
   }
 
   const expression =
@@ -333,11 +363,13 @@ function compileDeclarationList(
       return list;
     case DeclarationListEmitMode.Closure:
       // directives: function () { return [MyDir]; }
-      return o.fn([], [new o.ReturnStatement(list)]);
+      return o.arrowFn([], list);
     case DeclarationListEmitMode.ClosureResolved:
       // directives: function () { return [MyDir].map(ng.resolveForwardRef); }
       const resolvedList = list.prop('map').callFn([o.importExpr(R3.resolveForwardRef)]);
-      return o.fn([], [new o.ReturnStatement(resolvedList)]);
+      return o.arrowFn([], resolvedList);
+    case DeclarationListEmitMode.RuntimeResolved:
+      throw new Error(`Unsupported with an array of pre-resolved dependencies`);
   }
 }
 
@@ -549,23 +581,35 @@ function createHostBindingsFunction(
   const bindings =
       bindingParser.createBoundHostProperties(hostBindingsMetadata.properties, typeSourceSpan);
 
-
   // Calculate host event bindings
   const eventBindings =
       bindingParser.createDirectiveHostEventAsts(hostBindingsMetadata.listeners, typeSourceSpan);
 
   if (USE_TEMPLATE_PIPELINE) {
-    // TODO: host binding metadata is not yet parsed in the template pipeline, so we need to extract
-    // that code from below. Then, we will ingest a `HostBindingJob`, and run the template pipeline
-    // phases.
+    // The parser for host bindings treats class and style attributes specially -- they are
+    // extracted into these separate fields. This is not the case for templates, so the compiler can
+    // actually already handle these special attributes internally. Therefore, we just drop them
+    // into the attributes map.
+    if (hostBindingsMetadata.specialAttributes.styleAttr) {
+      hostBindingsMetadata.attributes['style'] =
+          o.literal(hostBindingsMetadata.specialAttributes.styleAttr);
+    }
+    if (hostBindingsMetadata.specialAttributes.classAttr) {
+      hostBindingsMetadata.attributes['class'] =
+          o.literal(hostBindingsMetadata.specialAttributes.classAttr);
+    }
+
     const hostJob = ingestHostBinding(
         {
           componentName: name,
           properties: bindings,
           events: eventBindings,
+          attributes: hostBindingsMetadata.attributes,
         },
         bindingParser, constantPool);
-    transformHostBinding(hostJob);
+    transform(hostJob, CompilationJobKind.Host);
+
+    definitionMap.set('hostAttrs', hostJob.root.attributes);
 
     const varCount = hostJob.root.vars;
     if (varCount !== null && varCount > 0) {
@@ -574,6 +618,10 @@ function createHostBindingsFunction(
 
     return emitHostBindingFunction(hostJob);
   }
+
+  let bindingId = 0;
+  const getNextBindingId = () => `${bindingId++}`;
+
   const bindingContext = o.variable(CONTEXT_NAME);
   const styleBuilder = new StylingBuilder(bindingContext);
 
@@ -637,7 +685,7 @@ function createHostBindingsFunction(
   for (const binding of allOtherBindings) {
     // resolve literal arrays and literal objects
     const value = binding.expression.visit(getValueConverter());
-    const bindingExpr = bindingFn(bindingContext, value);
+    const bindingExpr = bindingFn(bindingContext, value, getNextBindingId);
 
     const {bindingName, instruction, isAttribute} = getBindingNameAndInstruction(binding);
 
@@ -724,10 +772,13 @@ function createHostBindingsFunction(
         totalHostVarsCount +=
             Math.max(call.allocateBindingSlots - MIN_STYLING_BINDING_SLOTS_REQUIRED, 0);
 
+        const {params, stmts} =
+            convertStylingCall(call, bindingContext, bindingFn, getNextBindingId);
+        updateVariables.push(...stmts);
         updateInstructions.push({
           reference: instruction.reference,
-          paramsOrFn: convertStylingCall(call, bindingContext, bindingFn),
-          span: null
+          paramsOrFn: params,
+          span: null,
         });
       }
     });
@@ -757,13 +808,22 @@ function createHostBindingsFunction(
   return null;
 }
 
-function bindingFn(implicit: any, value: AST) {
-  return convertPropertyBinding(null, implicit, value, 'b');
+function bindingFn(implicit: any, value: AST, getNextBindingIdFn: () => string) {
+  return convertPropertyBinding(null, implicit, value, getNextBindingIdFn());
 }
 
 function convertStylingCall(
-    call: StylingInstructionCall, bindingContext: any, bindingFn: Function) {
-  return call.params(value => bindingFn(bindingContext, value).currValExpr);
+    call: StylingInstructionCall, bindingContext: any, bindingFn: Function,
+    getNextBindingIdFn: () => string) {
+  const stmts: o.Statement[] = [];
+  const params = call.params(value => {
+    const result = bindingFn(bindingContext, value, getNextBindingIdFn);
+    if (Array.isArray(result.stmts) && result.stmts.length > 0) {
+      stmts.push(...result.stmts);
+    }
+    return result.currValExpr;
+  });
+  return {params, stmts};
 }
 
 function getBindingNameAndInstruction(binding: ParsedProperty):

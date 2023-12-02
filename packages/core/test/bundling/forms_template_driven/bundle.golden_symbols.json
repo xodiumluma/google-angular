@@ -93,6 +93,9 @@
     "name": "CSP_NONCE"
   },
   {
+    "name": "ChainedInjector"
+  },
+  {
     "name": "ChangeDetectionStrategy"
   },
   {
@@ -159,6 +162,9 @@
     "name": "DefaultValueAccessor"
   },
   {
+    "name": "DistinctUntilChangedOperator"
+  },
+  {
     "name": "DistinctUntilChangedSubscriber"
   },
   {
@@ -184,9 +190,6 @@
   },
   {
     "name": "EVENT_MANAGER_PLUGINS"
-  },
-  {
-    "name": "EffectManager"
   },
   {
     "name": "ElementRef"
@@ -225,9 +228,6 @@
     "name": "GenericBrowserDomAdapter"
   },
   {
-    "name": "HAS_TRANSPLANTED_VIEWS"
-  },
-  {
     "name": "INJECTOR2"
   },
   {
@@ -259,6 +259,9 @@
   },
   {
     "name": "KeyEventsPlugin"
+  },
+  {
+    "name": "LContainerFlags"
   },
   {
     "name": "LOCALE_ID2"
@@ -345,9 +348,6 @@
     "name": "NG_VALUE_ACCESSOR"
   },
   {
-    "name": "NOOP_CLEANUP_FN"
-  },
-  {
     "name": "NOT_FOUND"
   },
   {
@@ -376,6 +376,9 @@
   },
   {
     "name": "NgForOf"
+  },
+  {
+    "name": "NgForOfContext"
   },
   {
     "name": "NgForm"
@@ -417,6 +420,9 @@
     "name": "NoneEncapsulationDomRenderer"
   },
   {
+    "name": "NoopNgZone"
+  },
+  {
     "name": "NullInjector"
   },
   {
@@ -453,6 +459,9 @@
     "name": "R3ViewContainerRef"
   },
   {
+    "name": "REACTIVE_LVIEW_CONSUMER_NODE"
+  },
+  {
     "name": "REMOVE_STYLES_ON_COMPONENT_DESTROY"
   },
   {
@@ -460,12 +469,6 @@
   },
   {
     "name": "RadioControlRegistryModule"
-  },
-  {
-    "name": "ReactiveLViewConsumer"
-  },
-  {
-    "name": "ReactiveNode"
   },
   {
     "name": "RefCountOperator"
@@ -487,9 +490,6 @@
   },
   {
     "name": "RootComponent"
-  },
-  {
-    "name": "RootViewRef"
   },
   {
     "name": "RuntimeError"
@@ -603,16 +603,13 @@
     "name": "ViewRef"
   },
   {
-    "name": "Watch"
-  },
-  {
-    "name": "WeakRefImpl"
-  },
-  {
     "name": "ZONE_IS_STABLE_OBSERVABLE"
   },
   {
     "name": "_DOM"
+  },
+  {
+    "name": "_DuplicateItemRecordList"
   },
   {
     "name": "_DuplicateMap"
@@ -658,9 +655,6 @@
   },
   {
     "name": "_locateOrCreateTextNode"
-  },
-  {
-    "name": "_nextReactiveId"
   },
   {
     "name": "_platformInjector"
@@ -723,6 +717,9 @@
     "name": "applyViewChange"
   },
   {
+    "name": "assertConsumerNode"
+  },
+  {
     "name": "attachInjectFlag"
   },
   {
@@ -759,19 +756,16 @@
     "name": "cleanUpView"
   },
   {
-    "name": "clearViewRefreshFlag"
+    "name": "collectNativeNodes"
   },
   {
-    "name": "collectNativeNodes"
+    "name": "collectNativeNodesInLContainer"
   },
   {
     "name": "collectStylingFromDirectives"
   },
   {
     "name": "collectStylingFromTAttrs"
-  },
-  {
-    "name": "commitLViewConsumerIfHasProducers"
   },
   {
     "name": "composeAsyncValidators"
@@ -793,6 +787,12 @@
   },
   {
     "name": "connectableObservableDescriptor"
+  },
+  {
+    "name": "consumerIsLive"
+  },
+  {
+    "name": "consumerPollProducersForChange"
   },
   {
     "name": "controlPath"
@@ -834,9 +834,6 @@
     "name": "createTView"
   },
   {
-    "name": "currentConsumer"
-  },
-  {
     "name": "deepForEach"
   },
   {
@@ -867,7 +864,7 @@
     "name": "detectChangesInView"
   },
   {
-    "name": "detectChangesInternal"
+    "name": "detectChangesInViewIfAttached"
   },
   {
     "name": "diPublicInInjector"
@@ -883,6 +880,9 @@
   },
   {
     "name": "enterView"
+  },
+  {
+    "name": "epoch"
   },
   {
     "name": "executeCheckHooks"
@@ -937,6 +937,9 @@
   },
   {
     "name": "forwardRef"
+  },
+  {
+    "name": "freeConsumers"
   },
   {
     "name": "from"
@@ -1032,9 +1035,6 @@
     "name": "getOrCreateComponentTView"
   },
   {
-    "name": "getOrCreateCurrentLViewConsumer"
-  },
-  {
     "name": "getOrCreateInjectable"
   },
   {
@@ -1077,9 +1077,6 @@
     "name": "getPromiseCtor"
   },
   {
-    "name": "getReactiveLViewConsumer"
-  },
-  {
     "name": "getSelectedIndex"
   },
   {
@@ -1113,6 +1110,9 @@
     "name": "handleError"
   },
   {
+    "name": "hasInSkipHydrationBlockFlag"
+  },
+  {
     "name": "hasParentInjector"
   },
   {
@@ -1132,9 +1132,6 @@
   },
   {
     "name": "importProvidersFrom"
-  },
-  {
-    "name": "inNotificationPhase"
   },
   {
     "name": "includeViewProviders"
@@ -1347,6 +1344,9 @@
     "name": "map"
   },
   {
+    "name": "markAncestorsForTraversal"
+  },
+  {
     "name": "markAsComponentHost"
   },
   {
@@ -1467,6 +1467,12 @@
     "name": "processInjectorTypesWithProviders"
   },
   {
+    "name": "producerRemoveLiveConsumerAtIndex"
+  },
+  {
+    "name": "producerUpdateValueVersion"
+  },
+  {
     "name": "profiler"
   },
   {
@@ -1516,6 +1522,9 @@
   },
   {
     "name": "requiredValidator"
+  },
+  {
+    "name": "requiresRefreshOrTraversal"
   },
   {
     "name": "resetPreOrderHookFlags"
@@ -1626,6 +1635,9 @@
     "name": "shimStylesContent"
   },
   {
+    "name": "shouldAddViewToDom"
+  },
+  {
     "name": "shouldSearchParent"
   },
   {
@@ -1665,16 +1677,16 @@
     "name": "unwrapRNode"
   },
   {
+    "name": "updateAncestorTraversalFlagsOnAttach"
+  },
+  {
     "name": "updateControl"
   },
   {
     "name": "updateMicroTaskStatus"
   },
   {
-    "name": "updateViewsToRefresh"
-  },
-  {
-    "name": "urlParsingNode"
+    "name": "viewAttachedToChangeDetector"
   },
   {
     "name": "walkProviderTree"
@@ -1756,6 +1768,9 @@
   },
   {
     "name": "ɵɵproperty"
+  },
+  {
+    "name": "ɵɵtemplate"
   },
   {
     "name": "ɵɵtext"

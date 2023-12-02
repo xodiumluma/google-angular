@@ -6,6 +6,8 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {consumerAfterComputation, consumerBeforeComputation, setActiveConsumer} from '@angular/core/primitives/signals';
+
 import {Injector} from '../../di/injector';
 import {ErrorHandler} from '../../error_handler';
 import {RuntimeError, RuntimeErrorCode} from '../../errors';
@@ -14,15 +16,15 @@ import {hasSkipHydrationAttrOnRElement} from '../../hydration/skip_hydration';
 import {PRESERVE_HOST_CONTENT, PRESERVE_HOST_CONTENT_DEFAULT} from '../../hydration/tokens';
 import {processTextNodeMarkersBeforeHydration} from '../../hydration/utils';
 import {DoCheck, OnChanges, OnInit} from '../../interface/lifecycle_hooks';
+import {Writable} from '../../interface/type';
 import {SchemaMetadata} from '../../metadata/schema';
 import {ViewEncapsulation} from '../../metadata/view';
 import {validateAgainstEventAttributes, validateAgainstEventProperties} from '../../sanitization/sanitization';
-import {setActiveConsumer} from '../../signals';
 import {assertDefined, assertEqual, assertGreaterThan, assertGreaterThanOrEqual, assertIndexInRange, assertNotEqual, assertNotSame, assertSame, assertString} from '../../util/assert';
 import {escapeCommentText} from '../../util/dom';
 import {normalizeDebugBindingName, normalizeDebugBindingValue} from '../../util/ng_reflect';
 import {stringify} from '../../util/stringify';
-import {assertFirstCreatePass, assertFirstUpdatePass, assertLView, assertTNodeForLView, assertTNodeForTView} from '../assert';
+import {assertFirstCreatePass, assertFirstUpdatePass, assertLView, assertNoDuplicateDirectives, assertTNodeForLView, assertTNodeForTView} from '../assert';
 import {attachPatchData} from '../context_discovery';
 import {getFactoryDef} from '../definition_factory';
 import {diPublicInInjector, getNodeInjectable, getOrCreateNodeInjectorForNode} from '../di';
@@ -36,12 +38,11 @@ import {Renderer} from '../interfaces/renderer';
 import {RComment, RElement, RNode, RText} from '../interfaces/renderer_dom';
 import {SanitizerFn} from '../interfaces/sanitization';
 import {isComponentDef, isComponentHost, isContentQueryHost} from '../interfaces/type_checks';
-import {CHILD_HEAD, CHILD_TAIL, CLEANUP, CONTEXT, DECLARATION_COMPONENT_VIEW, DECLARATION_VIEW, EMBEDDED_VIEW_INJECTOR, ENVIRONMENT, FLAGS, HEADER_OFFSET, HOST, HostBindingOpCodes, HYDRATION, ID, INJECTOR, LView, LViewEnvironment, LViewFlags, NEXT, PARENT, REACTIVE_HOST_BINDING_CONSUMER, REACTIVE_TEMPLATE_CONSUMER, RENDERER, T_HOST, TData, TVIEW, TView, TViewType} from '../interfaces/view';
+import {CHILD_HEAD, CHILD_TAIL, CLEANUP, CONTEXT, DECLARATION_COMPONENT_VIEW, DECLARATION_VIEW, EMBEDDED_VIEW_INJECTOR, ENVIRONMENT, FLAGS, HEADER_OFFSET, HOST, HostBindingOpCodes, HYDRATION, ID, INJECTOR, LView, LViewEnvironment, LViewFlags, NEXT, PARENT, REACTIVE_TEMPLATE_CONSUMER, RENDERER, T_HOST, TData, TVIEW, TView, TViewType} from '../interfaces/view';
 import {assertPureTNodeType, assertTNodeType} from '../node_assert';
 import {clearElementContents, updateTextNode} from '../node_manipulation';
 import {isInlineTemplate, isNodeMatchingSelectorList} from '../node_selector_matcher';
 import {profiler, ProfilerEvent} from '../profiler';
-import {commitLViewConsumerIfHasProducers, getReactiveLViewConsumer} from '../reactive_lview_consumer';
 import {getBindingsEnabled, getCurrentDirectiveIndex, getCurrentParentTNode, getCurrentTNodePlaceholderOk, getSelectedIndex, isCurrentTNodeParent, isInCheckNoChangesMode, isInI18nBlock, isInSkipHydrationBlock, setBindingRootForHostBindings, setCurrentDirectiveIndex, setCurrentQueryIndex, setCurrentTNode, setSelectedIndex} from '../state';
 import {NO_CHANGE} from '../tokens';
 import {mergeHostAttrs} from '../util/attrs_utils';
@@ -65,7 +66,6 @@ import {handleUnknownPropertyError, isPropertyValid, matchingSchemas} from './el
 export function processHostBindingOpCodes(tView: TView, lView: LView): void {
   const hostBindingOpCodes = tView.hostBindingOpCodes;
   if (hostBindingOpCodes === null) return;
-  const consumer = getReactiveLViewConsumer(lView, REACTIVE_HOST_BINDING_CONSUMER);
   try {
     for (let i = 0; i < hostBindingOpCodes.length; i++) {
       const opCode = hostBindingOpCodes[i] as number;
@@ -79,13 +79,10 @@ export function processHostBindingOpCodes(tView: TView, lView: LView): void {
         const hostBindingFn = hostBindingOpCodes[++i] as HostBindingsFunction<any>;
         setBindingRootForHostBindings(bindingRootIndx, directiveIdx);
         const context = lView[directiveIdx];
-        consumer.runInContext(hostBindingFn, RenderFlags.Update, context);
+        hostBindingFn(RenderFlags.Update, context);
       }
     }
   } finally {
-    if (lView[REACTIVE_HOST_BINDING_CONSUMER] === null) {
-      commitLViewConsumerIfHasProducers(lView, REACTIVE_HOST_BINDING_CONSUMER);
-    }
     setSelectedIndex(-1);
   }
 }
@@ -248,7 +245,6 @@ export function allocExpando(
 
 export function executeTemplate<T>(
     tView: TView, lView: LView<T>, templateFn: ComponentTemplate<T>, rf: RenderFlags, context: T) {
-  const consumer = getReactiveLViewConsumer(lView, REACTIVE_TEMPLATE_CONSUMER);
   const prevSelectedIndex = getSelectedIndex();
   const isUpdatePhase = rf & RenderFlags.Update;
   try {
@@ -262,20 +258,8 @@ export function executeTemplate<T>(
     const preHookType =
         isUpdatePhase ? ProfilerEvent.TemplateUpdateStart : ProfilerEvent.TemplateCreateStart;
     profiler(preHookType, context as unknown as {});
-    if (isUpdatePhase) {
-      consumer.runInContext(templateFn, rf, context);
-    } else {
-      const prevConsumer = setActiveConsumer(null);
-      try {
-        templateFn(rf, context);
-      } finally {
-        setActiveConsumer(prevConsumer);
-      }
-    }
+    templateFn(rf, context);
   } finally {
-    if (isUpdatePhase && lView[REACTIVE_TEMPLATE_CONSUMER] === null) {
-      commitLViewConsumerIfHasProducers(lView, REACTIVE_TEMPLATE_CONSUMER);
-    }
     setSelectedIndex(prevSelectedIndex);
 
     const postHookType =
@@ -1123,6 +1107,7 @@ function findDirectiveDefMatches(
       }
     }
   }
+  ngDevMode && matches !== null && assertNoDuplicateDirectives(matches);
   return matches === null ? null : [matches, hostDirectiveDefs];
 }
 
@@ -1210,7 +1195,7 @@ export function configureViewWithDirective<T>(
       assertGreaterThanOrEqual(directiveIndex, HEADER_OFFSET, 'Must be in Expando section');
   tView.data[directiveIndex] = def;
   const directiveFactory =
-      def.factory || ((def as {factory: Function}).factory = getFactoryDef(def.type, true));
+      def.factory || ((def as Writable<DirectiveDef<T>>).factory = getFactoryDef(def.type, true));
   // Even though `directiveFactory` will already be using `ɵɵdirectiveInject` in its generated code,
   // we also want to support `inject()` directly from the directive constructor context so we set
   // `ɵɵdirectiveInject` as the inject implementation here too.
@@ -1402,15 +1387,14 @@ export function createLContainer(
   const lContainer: LContainer = [
     hostNative,   // host native
     true,         // Boolean `true` in this position signifies that this is an `LContainer`
-    false,        // has transplanted views
+    0,            // flags
     currentView,  // parent
     null,         // next
-    0,            // transplanted views to refresh count
     tNode,        // t_host
+    null,         // dehydrated views
     native,       // native,
     null,         // view refs
     null,         // moved views
-    null,         // dehydrated views
   ];
   ngDevMode &&
       assertEqual(
@@ -1423,17 +1407,23 @@ export function createLContainer(
 export function refreshContentQueries(tView: TView, lView: LView): void {
   const contentQueries = tView.contentQueries;
   if (contentQueries !== null) {
-    for (let i = 0; i < contentQueries.length; i += 2) {
-      const queryStartIdx = contentQueries[i];
-      const directiveDefIdx = contentQueries[i + 1];
-      if (directiveDefIdx !== -1) {
-        const directiveDef = tView.data[directiveDefIdx] as DirectiveDef<any>;
-        ngDevMode && assertDefined(directiveDef, 'DirectiveDef not found.');
-        ngDevMode &&
-            assertDefined(directiveDef.contentQueries, 'contentQueries function should be defined');
-        setCurrentQueryIndex(queryStartIdx);
-        directiveDef.contentQueries!(RenderFlags.Update, lView[directiveDefIdx], directiveDefIdx);
+    const prevConsumer = setActiveConsumer(null);
+    try {
+      for (let i = 0; i < contentQueries.length; i += 2) {
+        const queryStartIdx = contentQueries[i];
+        const directiveDefIdx = contentQueries[i + 1];
+        if (directiveDefIdx !== -1) {
+          const directiveDef = tView.data[directiveDefIdx] as DirectiveDef<any>;
+          ngDevMode && assertDefined(directiveDef, 'DirectiveDef not found.');
+          ngDevMode &&
+              assertDefined(
+                  directiveDef.contentQueries, 'contentQueries function should be defined');
+          setCurrentQueryIndex(queryStartIdx);
+          directiveDef.contentQueries!(RenderFlags.Update, lView[directiveDefIdx], directiveDefIdx);
+        }
       }
+    } finally {
+      setActiveConsumer(prevConsumer);
     }
   }
 }

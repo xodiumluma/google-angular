@@ -7,7 +7,7 @@
  */
 
 import * as ir from '../../ir';
-import {CompilationJob, HostBindingCompilationJob} from '../compilation';
+import {CompilationJob, CompilationJobKind} from '../compilation';
 
 /**
  * Looks up an element in the given map by xref ID.
@@ -21,7 +21,7 @@ function lookupElement(
   return el;
 }
 
-export function phaseBindingSpecialization(job: CompilationJob): void {
+export function specializeBindings(job: CompilationJob): void {
   const elements = new Map<ir.XrefId, ir.ElementOrContainerOps>();
   for (const unit of job.units) {
     for (const op of unit.create) {
@@ -37,7 +37,6 @@ export function phaseBindingSpecialization(job: CompilationJob): void {
       if (op.kind !== ir.OpKind.Binding) {
         continue;
       }
-
       switch (op.bindingKind) {
         case ir.BindingKind.Attribute:
           if (op.name === 'ngNonBindable') {
@@ -54,10 +53,12 @@ export function phaseBindingSpecialization(job: CompilationJob): void {
           break;
         case ir.BindingKind.Property:
         case ir.BindingKind.Animation:
-          if (job instanceof HostBindingCompilationJob) {
-            // TODO: host property animations
+          if (job.kind === CompilationJobKind.Host) {
             ir.OpList.replace<ir.UpdateOp>(
-                op, ir.createHostPropertyOp(op.name, op.expression, op.sourceSpan));
+                op,
+                ir.createHostPropertyOp(
+                    op.name, op.expression, op.bindingKind === ir.BindingKind.Animation,
+                    op.sourceSpan));
           } else {
             ir.OpList.replace<ir.UpdateOp>(
                 op,
