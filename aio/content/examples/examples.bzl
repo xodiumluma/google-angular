@@ -36,7 +36,6 @@ EXAMPLES = {
     "dependency-injection": {"stackblitz": True, "zip": True},
     "dependency-injection-in-action": {"stackblitz": True, "zip": True},
     "deprecation-guide": {"stackblitz": True, "zip": True},
-    "displaying-data": {"stackblitz": True, "zip": True},
     "docs-style-guide": {"stackblitz": True, "zip": True},
     "dynamic-component-loader": {"stackblitz": True, "zip": True},
     "dynamic-form": {"stackblitz": True, "zip": True},
@@ -67,6 +66,7 @@ EXAMPLES = {
     "http": {"stackblitz": True, "zip": True},
     "i18n": {"stackblitz": True, "zip": True},
     "inputs-outputs": {"stackblitz": True, "zip": True},
+    "injection-token": {"stackblitz": False, "zip": False},
     "interpolation": {"stackblitz": True, "zip": True},
     "lazy-loading-ngmodules": {"stackblitz": True, "zip": True},
     "lifecycle-hooks": {"stackblitz": True, "zip": True},
@@ -84,10 +84,10 @@ EXAMPLES = {
     "router": {"stackblitz": True, "zip": True},
     "router-tutorial": {"stackblitz": True, "zip": True},
     "routing-with-urlmatcher": {"stackblitz": True, "zip": True},
-    "rx-library": {"stackblitz": False, "zip": False},
+    "rx-library": {"stackblitz": True, "zip": True},
     "schematics-for-libraries": {"stackblitz": False, "zip": True},
     "security": {"stackblitz": True, "zip": True},
-    "service-worker-getting-started": {"stackblitz": False, "zip": False},
+    "service-worker-getting-started": {"stackblitz": False, "zip": True},
     "setup": {"stackblitz": False, "zip": False},
     "structural-directives": {"stackblitz": True, "zip": True},
     "styleguide": {"stackblitz": False, "zip": False},
@@ -103,7 +103,7 @@ EXAMPLES = {
     "toh-pt5": {"stackblitz": True, "zip": True},
     "toh-pt6": {"stackblitz": True, "zip": True},
     "two-way-binding": {"stackblitz": True, "zip": True},
-    "universal": {"stackblitz": False, "zip": True},
+    "ssr": {"stackblitz": False, "zip": True},
     "upgrade-lazy-load-ajs": {"stackblitz": False, "zip": True},
     "upgrade-module": {"stackblitz": False, "zip": False},
     "upgrade-phonecat-1-typescript": {"stackblitz": False, "zip": False},
@@ -131,7 +131,6 @@ def docs_example(name, test = True, test_tags = [], test_exec_properties = {}, f
     native.filegroup(
         name = "files",
         srcs = native.glob(["**"], exclude = [
-            "BUILD.bazel",
             "**/node_modules/**",  # Node modules may exist from the legacy setup.
         ]),
     )
@@ -207,7 +206,7 @@ def docs_example(name, test = True, test_tags = [], test_exec_properties = {}, f
             data = [
                 ":%s" % name,
                 YARN_LABEL,
-                "@aio_npm//@angular/build-tooling/bazel/browsers/chromium",
+                "@npm//@angular/build-tooling/bazel/browsers/chromium",
                 "//aio/tools/examples:run-example-e2e",
                 "//aio/tools:windows-chromium-path",
                 # We install the whole node modules for runtime deps of e2e tests
@@ -230,7 +229,7 @@ def docs_example(name, test = True, test_tags = [], test_exec_properties = {}, f
                 "CHROMEDRIVER_BIN": "$(CHROMEDRIVER)",
             },
             toolchains = [
-                "@aio_npm//@angular/build-tooling/bazel/browsers/chromium:toolchain_alias",
+                "@npm//@angular/build-tooling/bazel/browsers/chromium:toolchain_alias",
             ],
             exec_properties = test_exec_properties,
             flaky = flaky,

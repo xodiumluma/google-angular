@@ -25,8 +25,8 @@ import type {ComponentCompilationJob, ViewCompilationUnit} from '../compilation'
  * Variables are generated here unconditionally, and may optimized away in future operations if it
  * turns out their values (and any side effects) are unused.
  */
-export function phaseGenerateVariables(cpl: ComponentCompilationJob): void {
-  recursivelyProcessView(cpl.root, /* there is no parent scope for the root view */ null);
+export function generateVariables(job: ComponentCompilationJob): void {
+  recursivelyProcessView(job.root, /* there is no parent scope for the root view */ null);
 }
 
 /**
@@ -36,7 +36,7 @@ export function phaseGenerateVariables(cpl: ComponentCompilationJob): void {
  * @param `parentScope` a scope extracted from the parent view which captures any variables which
  *     should be inherited by this view. `null` if the current view is the root view.
  */
-function recursivelyProcessView(view: ViewCompilationUnit, parentScope: Scope|null): void {
+function recursivelyProcessView(view: ViewCompilationUnit, parentScope: Scope | null): void {
   // Extract a `Scope` from this view.
   const scope = getScopeForView(view, parentScope);
 
@@ -46,7 +46,20 @@ function recursivelyProcessView(view: ViewCompilationUnit, parentScope: Scope|nu
         // Descend into child embedded views.
         recursivelyProcessView(view.job.views.get(op.xref)!, scope);
         break;
+      case ir.OpKind.Projection:
+        if (op.fallbackView !== null) {
+          recursivelyProcessView(view.job.views.get(op.fallbackView)!, scope);
+        }
+        break;
+      case ir.OpKind.RepeaterCreate:
+        // Descend into child embedded views.
+        recursivelyProcessView(view.job.views.get(op.xref)!, scope);
+        if (op.emptyView) {
+          recursivelyProcessView(view.job.views.get(op.emptyView)!, scope);
+        }
+        break;
       case ir.OpKind.Listener:
+      case ir.OpKind.TwoWayListener:
         // Prepend variables to listener handler functions.
         op.handlerOps.prepend(generateVariablesInScopeForView(view, scope));
         break;
@@ -71,6 +84,8 @@ interface Scope {
 
   contextVariables: Map<string, ir.SemanticVariable>;
 
+  aliases: Set<ir.AliasVariable>;
+
   /**
    * Local references collected from elements within the view.
    */
@@ -79,7 +94,7 @@ interface Scope {
   /**
    * `Scope` of the parent view, if any.
    */
-  parent: Scope|null;
+  parent: Scope | null;
 }
 
 /**
@@ -101,6 +116,8 @@ interface Reference {
    */
   targetId: ir.XrefId;
 
+  targetSlot: ir.SlotHandle;
+
   /**
    * A generated offset of this reference among all the references on a specific element.
    */
@@ -113,7 +130,7 @@ interface Reference {
  * Process a view and generate a `Scope` representing the variables available for reference within
  * that view.
  */
-function getScopeForView(view: ViewCompilationUnit, parent: Scope|null): Scope {
+function getScopeForView(view: ViewCompilationUnit, parent: Scope | null): Scope {
   const scope: Scope = {
     view: view.xref,
     viewContextVariable: {
@@ -122,6 +139,7 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope|null): Scope {
       view: view.xref,
     },
     contextVariables: new Map<string, ir.SemanticVariable>(),
+    aliases: view.aliases,
     references: [],
     parent,
   };
@@ -136,7 +154,6 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope|null): Scope {
 
   for (const op of view.create) {
     switch (op.kind) {
-      case ir.OpKind.Element:
       case ir.OpKind.ElementStart:
       case ir.OpKind.Template:
         if (!Array.isArray(op.localRefs)) {
@@ -148,6 +165,7 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope|null): Scope {
           scope.references.push({
             name: op.localRefs[offset].name,
             targetId: op.xref,
+            targetSlot: op.handle,
             offset,
             variable: {
               kind: ir.SemanticVariableKind.Identifier,
@@ -170,28 +188,63 @@ function getScopeForView(view: ViewCompilationUnit, parent: Scope|null): Scope {
  * itself may have inherited variables, etc.
  */
 function generateVariablesInScopeForView(
-    view: ViewCompilationUnit, scope: Scope): ir.VariableOp<ir.UpdateOp>[] {
+  view: ViewCompilationUnit,
+  scope: Scope,
+): ir.VariableOp<ir.UpdateOp>[] {
   const newOps: ir.VariableOp<ir.UpdateOp>[] = [];
 
   if (scope.view !== view.xref) {
     // Before generating variables for a parent view, we need to switch to the context of the parent
     // view with a `nextContext` expression. This context switching operation itself declares a
     // variable, because the context of the view may be referenced directly.
-    newOps.push(ir.createVariableOp(
-        view.job.allocateXrefId(), scope.viewContextVariable, new ir.NextContextExpr()));
+    newOps.push(
+      ir.createVariableOp(
+        view.job.allocateXrefId(),
+        scope.viewContextVariable,
+        new ir.NextContextExpr(),
+        ir.VariableFlags.None,
+      ),
+    );
   }
 
   // Add variables for all context variables available in this scope's view.
-  for (const [name, value] of view.job.views.get(scope.view)!.contextVariables) {
-    newOps.push(ir.createVariableOp(
-        view.job.allocateXrefId(), scope.contextVariables.get(name)!,
-        new o.ReadPropExpr(new ir.ContextExpr(scope.view), value)));
+  const scopeView = view.job.views.get(scope.view)!;
+  for (const [name, value] of scopeView.contextVariables) {
+    const context = new ir.ContextExpr(scope.view);
+    // We either read the context, or, if the variable is CTX_REF, use the context directly.
+    const variable = value === ir.CTX_REF ? context : new o.ReadPropExpr(context, value);
+    // Add the variable declaration.
+    newOps.push(
+      ir.createVariableOp(
+        view.job.allocateXrefId(),
+        scope.contextVariables.get(name)!,
+        variable,
+        ir.VariableFlags.None,
+      ),
+    );
+  }
+
+  for (const alias of scopeView.aliases) {
+    newOps.push(
+      ir.createVariableOp(
+        view.job.allocateXrefId(),
+        alias,
+        alias.expression.clone(),
+        ir.VariableFlags.AlwaysInline,
+      ),
+    );
   }
 
   // Add variables for all local references declared for elements in this scope.
   for (const ref of scope.references) {
-    newOps.push(ir.createVariableOp(
-        view.job.allocateXrefId(), ref.variable, new ir.ReferenceExpr(ref.targetId, ref.offset)));
+    newOps.push(
+      ir.createVariableOp(
+        view.job.allocateXrefId(),
+        ref.variable,
+        new ir.ReferenceExpr(ref.targetId, ref.targetSlot, ref.offset),
+        ir.VariableFlags.None,
+      ),
+    );
   }
 
   if (scope.parent !== null) {

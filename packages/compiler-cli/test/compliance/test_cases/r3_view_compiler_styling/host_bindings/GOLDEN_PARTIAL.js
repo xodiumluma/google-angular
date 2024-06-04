@@ -246,7 +246,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     <div class="A{{p1}}B{{p2}}C{{p3}}D{{p4}}E{{p5}}F{{p6}}G{{p7}}H"></div>
     <div class="A{{p1}}B{{p2}}C{{p3}}D{{p4}}E{{p5}}F{{p6}}G{{p7}}H{{p8}}I"></div>
     <div class="A{{p1}}B{{p2}}C{{p3}}D{{p4}}E{{p5}}F{{p6}}G{{p7}}H{{p8}}I{{p9}}J"></div>
-  `,
+  `
                 }]
         }] });
 export class MyModule {
@@ -326,7 +326,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     <div style="p1:{{p1}};p2:{{p2}};p3:{{p3}};p4:{{p4}};p5:{{p5}};p6:{{p6}};p7:{{p7}};"></div>
     <div style="p1:{{p1}};p2:{{p2}};p3:{{p3}};p4:{{p4}};p5:{{p5}};p6:{{p6}};p7:{{p7}};p8:{{p8}};"></div>
     <div style="p1:{{p1}};p2:{{p2}};p3:{{p3}};p4:{{p4}};p5:{{p5}};p6:{{p6}};p7:{{p7}};p8:{{p8}};p9:{{p9}};"></div>
-  `,
+  `
                 }]
         }] });
 export class MyModule {
@@ -425,7 +425,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Component,
             args: [{
                     selector: 'my-component',
-                    template: '<div myWidthDir myHeightDir myClassDir></div>',
+                    template: '<div myWidthDir myHeightDir myClassDir></div>'
                 }]
         }] });
 export class MyModule {
@@ -469,5 +469,36 @@ export declare class MyModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<MyModule, never>;
     static ɵmod: i0.ɵɵNgModuleDeclaration<MyModule, [typeof MyComponent, typeof WidthDirective, typeof HeightDirective, typeof ClassDirective], never, never>;
     static ɵinj: i0.ɵɵInjectorDeclaration<MyModule>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: css_custom_properties.js
+ ****************************************************************************************************/
+import { Directive } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyDirective {
+}
+MyDirective.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+MyDirective.ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyDirective, selector: "my-dir", host: { properties: { "style.--camelCase": "value", "style.--kebab-case": "value" }, styleAttribute: "--camelCase: foo; --kebab-case: foo" }, ngImport: i0 });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyDirective, decorators: [{
+            type: Directive,
+            args: [{
+                    selector: 'my-dir',
+                    host: {
+                        '[style.--camelCase]': 'value',
+                        '[style.--kebab-case]': 'value',
+                        'style': '--camelCase: foo; --kebab-case: foo'
+                    }
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: css_custom_properties.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyDirective {
+    value: any;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyDirective, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<MyDirective, "my-dir", never, {}, {}, never, never, false, never>;
 }
 

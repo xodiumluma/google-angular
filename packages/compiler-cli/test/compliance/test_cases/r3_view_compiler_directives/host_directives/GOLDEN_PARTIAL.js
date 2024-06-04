@@ -28,7 +28,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'my-component',
                     template: '',
-                    hostDirectives: [DirectiveA, DirectiveB],
+                    hostDirectives: [DirectiveA, DirectiveB]
                 }]
         }] });
 
@@ -70,7 +70,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Directive,
             args: [{
                     standalone: true,
-                    hostDirectives: [DirectiveA],
+                    hostDirectives: [DirectiveA]
                 }]
         }] });
 export class DirectiveC {
@@ -81,7 +81,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Directive,
             args: [{
                     standalone: true,
-                    hostDirectives: [DirectiveB],
+                    hostDirectives: [DirectiveB]
                 }]
         }] });
 export class MyComponent {
@@ -93,7 +93,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'my-component',
                     template: '',
-                    hostDirectives: [DirectiveC],
+                    hostDirectives: [DirectiveC]
                 }]
         }] });
 
@@ -126,24 +126,24 @@ import * as i0 from "@angular/core";
 export class MyComponent {
 }
 MyComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, selector: "my-component", hostDirectives: [{ directive: i0.forwardRef(function () { return DirectiveB; }) }], ngImport: i0, template: '', isInline: true });
+MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, selector: "my-component", hostDirectives: [{ directive: i0.forwardRef(() => DirectiveB) }], ngImport: i0, template: '', isInline: true });
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, decorators: [{
             type: Component,
             args: [{
                     selector: 'my-component',
                     template: '',
-                    hostDirectives: [forwardRef(() => DirectiveB)],
+                    hostDirectives: [forwardRef(() => DirectiveB)]
                 }]
         }] });
 export class DirectiveB {
 }
 DirectiveB.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: DirectiveB, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-DirectiveB.ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: DirectiveB, isStandalone: true, hostDirectives: [{ directive: i0.forwardRef(function () { return DirectiveA; }), inputs: ["value", "value"] }], ngImport: i0 });
+DirectiveB.ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: DirectiveB, isStandalone: true, hostDirectives: [{ directive: i0.forwardRef(() => DirectiveA), inputs: ["value", "value"] }], ngImport: i0 });
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: DirectiveB, decorators: [{
             type: Directive,
             args: [{
                     standalone: true,
-                    hostDirectives: [{ directive: forwardRef(() => DirectiveA), inputs: ['value'] }],
+                    hostDirectives: [{ directive: forwardRef(() => DirectiveA), inputs: ['value'] }]
                 }]
         }] });
 export class DirectiveA {
@@ -212,8 +212,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     hostDirectives: [{
                             directive: HostDir,
                             inputs: ['value', 'color: colorAlias'],
-                            outputs: ['opened', 'closed: closedAlias'],
-                        }],
+                            outputs: ['opened', 'closed: closedAlias']
+                        }]
                 }]
         }] });
 
@@ -225,8 +225,8 @@ import * as i0 from "@angular/core";
 export declare class HostDir {
     value: number;
     color: string;
-    opened: EventEmitter<unknown>;
-    closed: EventEmitter<unknown>;
+    opened: EventEmitter<any>;
+    closed: EventEmitter<any>;
     static ɵfac: i0.ɵɵFactoryDeclaration<HostDir, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<HostDir, never, never, { "value": { "alias": "value"; "required": false; }; "color": { "alias": "color"; "required": false; }; }, { "opened": "opened"; "closed": "closed"; }, never, never, true, never>;
 }
@@ -276,8 +276,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     hostDirectives: [{
                             directive: HostDir,
                             inputs: ['valueAlias', 'colorAlias: customColorAlias'],
-                            outputs: ['openedAlias', 'closedAlias: customClosedAlias'],
-                        }],
+                            outputs: ['openedAlias', 'closedAlias: customClosedAlias']
+                        }]
                 }]
         }] });
 
@@ -289,8 +289,8 @@ import * as i0 from "@angular/core";
 export declare class HostDir {
     value: number;
     color: string;
-    opened: EventEmitter<unknown>;
-    closed: EventEmitter<unknown>;
+    opened: EventEmitter<any>;
+    closed: EventEmitter<any>;
     static ɵfac: i0.ɵɵFactoryDeclaration<HostDir, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<HostDir, never, never, { "value": { "alias": "valueAlias"; "required": false; }; "color": { "alias": "colorAlias"; "required": false; }; }, { "opened": "openedAlias"; "closed": "closedAlias"; }, never, never, true, never>;
 }

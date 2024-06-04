@@ -114,7 +114,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     selector: 'my-component',
                     template: `
   {age, select, 10 {ten} 20 {twenty} other {other}}
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -224,7 +224,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     template: `
   <div i18n>{age, select, 10 {ten} 20 {twenty} other {{% other %}}}</div>
 `,
-                    interpolation: ['{%', '%}'],
+                    interpolation: ['{%', '%}']
                 }]
         }] });
 export class MyModule {
@@ -390,7 +390,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     {gender, select, male {male} female {female} other {other}}
     {age, select, 10 {ten} 20 {twenty} 30 {thirty} other {other}}
   </div>
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -895,5 +895,109 @@ export declare class MyModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<MyModule, never>;
     static ɵmod: i0.ɵɵNgModuleDeclaration<MyModule, [typeof MyComponent], never, never>;
     static ɵinj: i0.ɵɵInjectorDeclaration<MyModule>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: root_icu_with_elements.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyComponent {
+}
+MyComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, isStandalone: true, selector: "my-component", ngImport: i0, template: `
+    <span i18n="someText1">{
+      someField,
+      select,
+      WEBSITE {
+        <strong>someText</strong>
+      }
+    }</span>
+
+    <span>
+    {
+      someField,
+      select,
+      WEBSITE {
+        <strong>someText</strong>
+      }
+    }
+    </span>
+`, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'my-component',
+                    standalone: true,
+                    template: `
+    <span i18n="someText1">{
+      someField,
+      select,
+      WEBSITE {
+        <strong>someText</strong>
+      }
+    }</span>
+
+    <span>
+    {
+      someField,
+      select,
+      WEBSITE {
+        <strong>someText</strong>
+      }
+    }
+    </span>
+`
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: root_icu_with_elements.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyComponent {
+    someField: any;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyComponent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyComponent, "my-component", never, {}, {}, never, never, true, never>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: attribute_interpolation.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyComponent {
+}
+MyComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, isStandalone: true, selector: "my-comp", ngImport: i0, template: `
+  <div i18n>
+    <span title="{{foo}}-{{foo}}"></span>
+    <span>{foo, select, other {<span title="{{foo}}-{{foo}}">foo</span>}}</span>
+    <span>{foo, select, other {{{foo}}-{{foo}}}}</span>
+  </div>
+  `, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'my-comp',
+                    standalone: true,
+                    template: `
+  <div i18n>
+    <span title="{{foo}}-{{foo}}"></span>
+    <span>{foo, select, other {<span title="{{foo}}-{{foo}}">foo</span>}}</span>
+    <span>{foo, select, other {{{foo}}-{{foo}}}}</span>
+  </div>
+  `
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: attribute_interpolation.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyComponent {
+    foo: any;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyComponent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyComponent, "my-comp", never, {}, {}, never, never, true, never>;
 }
 

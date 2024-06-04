@@ -25,24 +25,24 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^16.1.0-rc.0",
-    "@angular/common": "^16.1.0-rc.0",
-    "@angular/compiler": "^16.1.0-rc.0",
-    "@angular/core": "^16.1.0-rc.0",
-    "@angular/forms": "^16.1.0-rc.0",
-    "@angular/platform-browser": "^16.1.0-rc.0",
-    "@angular/platform-browser-dynamic": "^16.1.0-rc.0",
-    "@angular/router": "^16.1.0-rc.0",
-    "@angular/upgrade": "^16.1.0-rc.0",
+    "@angular/animations": "18.0.0",
+    "@angular/common": "18.0.0",
+    "@angular/compiler": "18.0.0",
+    "@angular/core": "18.0.0",
+    "@angular/forms": "18.0.0",
+    "@angular/platform-browser": "18.0.0",
+    "@angular/platform-browser-dynamic": "18.0.0",
+    "@angular/router": "18.0.0",
+    "@angular/upgrade": "18.0.0",
     "core-js": "^3.0.0",
     "rxjs": "~7.8.0",
     "systemjs": "~0.19.39",
     "systemjs-plugin-babel": "~0.0.25",
     "tslib": "^2.3.0",
-    "zone.js": "~0.13.0"
+    "zone.js": "~0.14.0"
   },
   "devDependencies": {
-    "@angular/compiler-cli": "^16.1.0-rc.0",
+    "@angular/compiler-cli": "18.0.0",
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^13.2.0",
     "@types/angular": "^1.8.4",
@@ -50,11 +50,11 @@
     "@types/angular-mocks": "^1.7.1",
     "@types/angular-resource": "^1.5.17",
     "@types/angular-route": "^1.7.2",
-    "@types/jasmine": "~4.3.0",
+    "@types/jasmine": "~5.1.0",
     "@types/node": "^16.11.35",
     "concurrently": "^8.0.0",
     "http-server": "^14.0.0",
-    "jasmine-core": "~4.6.0",
+    "jasmine-core": "~5.1.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-jasmine": "~5.1.0",
@@ -63,6 +63,6 @@
     "protractor": "~7.0.0",
     "rollup": "^2.70.1",
     "rollup-plugin-terser": "^7.0.2",
-    "typescript": "~4.9.3"
+    "typescript": "~5.4.0"
   }
 }

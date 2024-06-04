@@ -6,18 +6,31 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ApplicationRef} from '../application_ref';
-import {CONTAINER_HEADER_OFFSET, DEHYDRATED_VIEWS, LContainer} from '../render3/interfaces/container';
+import {ApplicationRef} from '../application/application_ref';
+import {
+  CONTAINER_HEADER_OFFSET,
+  DEHYDRATED_VIEWS,
+  LContainer,
+} from '../render3/interfaces/container';
 import {Renderer} from '../render3/interfaces/renderer';
 import {RNode} from '../render3/interfaces/renderer_dom';
-import {isLContainer} from '../render3/interfaces/type_checks';
-import {HEADER_OFFSET, HOST, LView, PARENT, RENDERER, TVIEW} from '../render3/interfaces/view';
+import {isLContainer, isLView} from '../render3/interfaces/type_checks';
+import {
+  HEADER_OFFSET,
+  HOST,
+  HYDRATION,
+  LView,
+  PARENT,
+  RENDERER,
+  TVIEW,
+} from '../render3/interfaces/view';
 import {nativeRemoveNode} from '../render3/node_manipulation';
 import {EMPTY_ARRAY} from '../util/empty';
 
 import {validateSiblingNodeExists} from './error_handling';
+import {cleanupI18nHydrationData} from './i18n';
 import {DehydratedContainerView, NUM_ROOT_NODES} from './interfaces';
-import {getComponentLViewForHydration} from './utils';
+import {getLNodeForHydration} from './utils';
 
 /**
  * Removes all dehydrated views from a given LContainer:
@@ -73,12 +86,14 @@ function cleanupLContainer(lContainer: LContainer) {
  * this LView and invokes dehydrated views cleanup function for each one.
  */
 function cleanupLView(lView: LView) {
+  cleanupI18nHydrationData(lView);
+
   const tView = lView[TVIEW];
   for (let i = HEADER_OFFSET; i < tView.bindingStartIndex; i++) {
     if (isLContainer(lView[i])) {
       const lContainer = lView[i];
       cleanupLContainer(lContainer);
-    } else if (Array.isArray(lView[i])) {
+    } else if (isLView(lView[i])) {
       // This is a component, enter the `cleanupLView` recursively.
       cleanupLView(lView[i]);
     }
@@ -92,11 +107,20 @@ function cleanupLView(lView: LView) {
 export function cleanupDehydratedViews(appRef: ApplicationRef) {
   const viewRefs = appRef._views;
   for (const viewRef of viewRefs) {
-    const lView = getComponentLViewForHydration(viewRef);
+    const lNode = getLNodeForHydration(viewRef);
     // An `lView` might be `null` if a `ViewRef` represents
     // an embedded view (not a component view).
-    if (lView !== null && lView[HOST] !== null) {
-      cleanupLView(lView);
+    if (lNode !== null && lNode[HOST] !== null) {
+      if (isLView(lNode)) {
+        cleanupLView(lNode);
+      } else {
+        // Cleanup in the root component view
+        const componentLView = lNode[HOST] as LView<unknown>;
+        cleanupLView(componentLView);
+
+        // Cleanup in all views within this view container
+        cleanupLContainer(lNode);
+      }
       ngDevMode && ngDevMode.dehydratedViewsCleanupRuns++;
     }
   }

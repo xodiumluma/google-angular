@@ -6,23 +6,72 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ApplicationRef} from '../application_ref';
+import {ApplicationRef} from '../application/application_ref';
+import {APP_ID} from '../application/application_tokens';
+import {isDetachedByI18n} from '../i18n/utils';
 import {ViewEncapsulation} from '../metadata';
-import {collectNativeNodes} from '../render3/collect_native_nodes';
+import {Renderer2} from '../render';
+import {collectNativeNodes, collectNativeNodesInLContainer} from '../render3/collect_native_nodes';
 import {getComponentDef} from '../render3/definition';
 import {CONTAINER_HEADER_OFFSET, LContainer} from '../render3/interfaces/container';
-import {TNode, TNodeType} from '../render3/interfaces/node';
+import {isTNodeShape, TNode, TNodeType} from '../render3/interfaces/node';
 import {RElement} from '../render3/interfaces/renderer_dom';
-import {hasI18n, isComponentHost, isLContainer, isProjectionTNode, isRootView} from '../render3/interfaces/type_checks';
-import {CONTEXT, FLAGS, HEADER_OFFSET, HOST, LView, LViewFlags, RENDERER, TView, TVIEW, TViewType} from '../render3/interfaces/view';
-import {unwrapRNode} from '../render3/util/view_utils';
+import {
+  hasI18n,
+  isComponentHost,
+  isLContainer,
+  isProjectionTNode,
+  isRootView,
+} from '../render3/interfaces/type_checks';
+import {
+  CONTEXT,
+  HEADER_OFFSET,
+  HOST,
+  LView,
+  PARENT,
+  RENDERER,
+  TView,
+  TVIEW,
+  TViewType,
+} from '../render3/interfaces/view';
+import {unwrapLView, unwrapRNode} from '../render3/util/view_utils';
 import {TransferState} from '../transfer_state';
 
 import {unsupportedProjectionOfDomNodes} from './error_handling';
-import {CONTAINERS, DISCONNECTED_NODES, ELEMENT_CONTAINERS, MULTIPLIER, NODES, NUM_ROOT_NODES, SerializedContainerView, SerializedView, TEMPLATE_ID, TEMPLATES} from './interfaces';
-import {calcPathForNode} from './node_lookup_utils';
-import {hasInSkipHydrationBlockFlag, isInSkipHydrationBlock, SKIP_HYDRATION_ATTR_NAME} from './skip_hydration';
-import {getComponentLViewForHydration, NGH_ATTR_NAME, NGH_DATA_KEY, TextNodeMarker} from './utils';
+import {
+  collectDomEventsInfo,
+  EVENT_REPLAY_ENABLED_DEFAULT,
+  setJSActionAttribute,
+} from './event_replay';
+import {
+  getOrComputeI18nChildren,
+  isI18nHydrationEnabled,
+  isI18nHydrationSupportEnabled,
+  trySerializeI18nBlock,
+} from './i18n';
+import {
+  CONTAINERS,
+  DISCONNECTED_NODES,
+  ELEMENT_CONTAINERS,
+  I18N_DATA,
+  MULTIPLIER,
+  NODES,
+  NUM_ROOT_NODES,
+  SerializedContainerView,
+  SerializedView,
+  TEMPLATE_ID,
+  TEMPLATES,
+} from './interfaces';
+import {calcPathForNode, isDisconnectedNode} from './node_lookup_utils';
+import {isInSkipHydrationBlock, SKIP_HYDRATION_ATTR_NAME} from './skip_hydration';
+import {IS_EVENT_REPLAY_ENABLED} from './tokens';
+import {
+  getLNodeForHydration,
+  NGH_ATTR_NAME,
+  NGH_DATA_KEY,
+  processTextNodeBeforeSerialization,
+  TextNodeMarker,
+} from './utils';
 
 /**
  * A collection that tracks all serialized views (`ngh` DOM annotations)
@@ -76,19 +125,91 @@ function getSsrId(tView: TView): string {
  * process. The context is used to share and collect information
  * during the serialization.
  */
-interface HydrationContext {
+export interface HydrationContext {
   serializedViewCollection: SerializedViewCollection;
   corruptedTextNodes: Map<HTMLElement, TextNodeMarker>;
+  isI18nHydrationEnabled: boolean;
+  i18nChildren: Map<TView, Set<number> | null>;
+  eventTypesToReplay: {regular: Set<string>; capture: Set<string>};
+  shouldReplayEvents: boolean;
 }
 
 /**
  * Computes the number of root nodes in a given view
  * (or child nodes in a given container if a tNode is provided).
  */
-function calcNumRootNodes(tView: TView, lView: LView, tNode: TNode|null): number {
+function calcNumRootNodes(tView: TView, lView: LView, tNode: TNode | null): number {
   const rootNodes: unknown[] = [];
   collectNativeNodes(tView, lView, tNode, rootNodes);
   return rootNodes.length;
+}
+
+/**
+ * Computes the number of root nodes in all views in a given LContainer.
+ */
+function calcNumRootNodesInLContainer(lContainer: LContainer): number {
+  const rootNodes: unknown[] = [];
+  collectNativeNodesInLContainer(lContainer, rootNodes);
+  return rootNodes.length;
+}
+
+/**
+ * Annotates root level component's LView for hydration,
+ * see `annotateHostElementForHydration` for additional information.
+ */
+function annotateComponentLViewForHydration(
+  lView: LView,
+  context: HydrationContext,
+): number | null {
+  const hostElement = lView[HOST];
+  // Root elements might also be annotated with the `ngSkipHydration` attribute,
+  // check if it's present before starting the serialization process.
+  if (hostElement && !(hostElement as HTMLElement).hasAttribute(SKIP_HYDRATION_ATTR_NAME)) {
+    return annotateHostElementForHydration(hostElement as HTMLElement, lView, context);
+  }
+  return null;
+}
+
+/**
+ * Annotates root level LContainer for hydration. This happens when a root component
+ * injects ViewContainerRef, thus making the component an anchor for a view container.
+ * This function serializes the component itself as well as all views from the view
+ * container.
+ */
+function annotateLContainerForHydration(lContainer: LContainer, context: HydrationContext) {
+  const componentLView = unwrapLView(lContainer[HOST]) as LView<unknown>;
+
+  // Serialize the root component itself.
+  const componentLViewNghIndex = annotateComponentLViewForHydration(componentLView, context);
+
+  if (componentLViewNghIndex === null) {
+    // Component was not serialized (for example, if hydration was skipped by adding
+    // the `ngSkipHydration` attribute or this component uses i18n blocks in the template,
+    // but `withI18nSupport()` was not added), avoid annotating host element with the `ngh`
+    // attribute.
+    return;
+  }
+
+  const hostElement = unwrapRNode(componentLView[HOST]!) as HTMLElement;
+
+  // Serialize all views within this view container.
+  const rootLView = lContainer[PARENT];
+  const rootLViewNghIndex = annotateHostElementForHydration(hostElement, rootLView, context);
+
+  const renderer = componentLView[RENDERER] as Renderer2;
+
+  // For cases when a root component also acts as an anchor node for a ViewContainerRef
+  // (for example, when ViewContainerRef is injected in a root component), there is a need
+  // to serialize information about the component itself, as well as an LContainer that
+  // represents this ViewContainerRef. Effectively, we need to serialize 2 pieces of info:
+  // (1) hydration info for the root component itself and (2) hydration info for the
+  // ViewContainerRef instance (an LContainer). Each piece of information is included into
+  // the hydration data (in the TransferState object) separately, thus we end up with 2 ids.
+  // Since we only have 1 root element, we encode both bits of info into a single string:
+  // ids are separated by the `|` char (e.g. `10|25`, where `10` is the ngh for a component view
+  // and 25 is the `ngh` for a root view which holds LContainer).
+  const finalIndex = `${componentLViewNghIndex}|${rootLViewNghIndex}`;
+  renderer.setAttribute(hostElement, NGH_ATTR_NAME, finalIndex);
 }
 
 /**
@@ -97,27 +218,39 @@ function calcNumRootNodes(tView: TView, lView: LView, tNode: TNode|null): number
  *
  * @param appRef An instance of an ApplicationRef.
  * @param doc A reference to the current Document instance.
+ * @return event types that need to be replayed
  */
 export function annotateForHydration(appRef: ApplicationRef, doc: Document) {
+  const injector = appRef.injector;
+  const isI18nHydrationEnabledVal = isI18nHydrationEnabled(injector);
   const serializedViewCollection = new SerializedViewCollection();
   const corruptedTextNodes = new Map<HTMLElement, TextNodeMarker>();
   const viewRefs = appRef._views;
+  const shouldReplayEvents = injector.get(IS_EVENT_REPLAY_ENABLED, EVENT_REPLAY_ENABLED_DEFAULT);
+  const eventTypesToReplay = {
+    regular: new Set<string>(),
+    capture: new Set<string>(),
+  };
   for (const viewRef of viewRefs) {
-    const lView = getComponentLViewForHydration(viewRef);
+    const lNode = getLNodeForHydration(viewRef);
+
     // An `lView` might be `null` if a `ViewRef` represents
     // an embedded view (not a component view).
-    if (lView !== null) {
-      const hostElement = lView[HOST];
-      // Root elements might also be annotated with the `ngSkipHydration` attribute,
-      // check if it's present before starting the serialization process.
-      if (hostElement && !(hostElement as HTMLElement).hasAttribute(SKIP_HYDRATION_ATTR_NAME)) {
-        const context: HydrationContext = {
-          serializedViewCollection,
-          corruptedTextNodes,
-        };
-        annotateHostElementForHydration(hostElement as HTMLElement, lView, context);
-        insertCorruptedTextNodeMarkers(corruptedTextNodes, doc);
+    if (lNode !== null) {
+      const context: HydrationContext = {
+        serializedViewCollection,
+        corruptedTextNodes,
+        isI18nHydrationEnabled: isI18nHydrationEnabledVal,
+        i18nChildren: new Map(),
+        eventTypesToReplay,
+        shouldReplayEvents,
+      };
+      if (isLContainer(lNode)) {
+        annotateLContainerForHydration(lNode, context);
+      } else {
+        annotateComponentLViewForHydration(lNode, context);
       }
+      insertCorruptedTextNodeMarkers(corruptedTextNodes, doc);
     }
   }
 
@@ -127,8 +260,9 @@ export function annotateForHydration(appRef: ApplicationRef, doc: Document) {
   // hydration logic was setup and enabled correctly. Otherwise, if a client
   // hydration doesn't find a key in the transfer state - an error is produced.
   const serializedViews = serializedViewCollection.getAll();
-  const transferState = appRef.injector.get(TransferState);
+  const transferState = injector.get(TransferState);
   transferState.set(NGH_DATA_KEY, serializedViews);
+  return eventTypesToReplay;
 }
 
 /**
@@ -140,43 +274,71 @@ export function annotateForHydration(appRef: ApplicationRef, doc: Document) {
  * @returns an array of the `SerializedView` objects
  */
 function serializeLContainer(
-    lContainer: LContainer, context: HydrationContext): SerializedContainerView[] {
+  lContainer: LContainer,
+  context: HydrationContext,
+): SerializedContainerView[] {
   const views: SerializedContainerView[] = [];
-  let lastViewAsString: string = '';
+  let lastViewAsString = '';
 
   for (let i = CONTAINER_HEADER_OFFSET; i < lContainer.length; i++) {
     let childLView = lContainer[i] as LView;
 
-    // If this is a root view, get an LView for the underlying component,
-    // because it contains information about the view to serialize.
-    if (isRootView(childLView)) {
-      childLView = childLView[HEADER_OFFSET];
-    }
-    const childTView = childLView[TVIEW];
-
     let template: string;
-    let numRootNodes = 0;
-    if (childTView.type === TViewType.Component) {
-      template = childTView.ssrId!;
+    let numRootNodes: number;
+    let serializedView: SerializedContainerView | undefined;
 
-      // This is a component view, thus it has only 1 root node: the component
-      // host node itself (other nodes would be inside that host node).
-      numRootNodes = 1;
-    } else {
-      template = getSsrId(childTView);
-      numRootNodes = calcNumRootNodes(childTView, childLView, childTView.firstChild);
+    if (isRootView(childLView)) {
+      // If this is a root view, get an LView for the underlying component,
+      // because it contains information about the view to serialize.
+      childLView = childLView[HEADER_OFFSET];
+
+      // If we have an LContainer at this position, this indicates that the
+      // host element was used as a ViewContainerRef anchor (e.g. a `ViewContainerRef`
+      // was injected within the component class). This case requires special handling.
+      if (isLContainer(childLView)) {
+        // Calculate the number of root nodes in all views in a given container
+        // and increment by one to account for an anchor node itself, i.e. in this
+        // scenario we'll have a layout that would look like this:
+        // `<app-root /><#VIEW1><#VIEW2>...<!--container-->`
+        // The `+1` is to capture the `<app-root />` element.
+        numRootNodes = calcNumRootNodesInLContainer(childLView) + 1;
+
+        annotateLContainerForHydration(childLView, context);
+
+        const componentLView = unwrapLView(childLView[HOST]) as LView<unknown>;
+
+        serializedView = {
+          [TEMPLATE_ID]: componentLView[TVIEW].ssrId!,
+          [NUM_ROOT_NODES]: numRootNodes,
+        };
+      }
     }
 
-    const view: SerializedContainerView = {
-      [TEMPLATE_ID]: template,
-      [NUM_ROOT_NODES]: numRootNodes,
-      ...serializeLView(lContainer[i] as LView, context),
-    };
+    if (!serializedView) {
+      const childTView = childLView[TVIEW];
+
+      if (childTView.type === TViewType.Component) {
+        template = childTView.ssrId!;
+
+        // This is a component view, thus it has only 1 root node: the component
+        // host node itself (other nodes would be inside that host node).
+        numRootNodes = 1;
+      } else {
+        template = getSsrId(childTView);
+        numRootNodes = calcNumRootNodes(childTView, childLView, childTView.firstChild);
+      }
+
+      serializedView = {
+        [TEMPLATE_ID]: template,
+        [NUM_ROOT_NODES]: numRootNodes,
+        ...serializeLView(lContainer[i] as LView, context),
+      };
+    }
 
     // Check if the previous view has the same shape (for example, it was
     // produced by the *ngFor), in which case bump the counter on the previous
     // view instead of including the same information again.
-    const currentViewAsString = JSON.stringify(view);
+    const currentViewAsString = JSON.stringify(serializedView);
     if (views.length > 0 && currentViewAsString === lastViewAsString) {
       const previousView = views[views.length - 1];
       previousView[MULTIPLIER] ??= 1;
@@ -184,7 +346,7 @@ function serializeLContainer(
     } else {
       // Record this view as most recently added.
       lastViewAsString = currentViewAsString;
-      views.push(view);
+      views.push(serializedView);
     }
   }
   return views;
@@ -195,10 +357,15 @@ function serializeLContainer(
  * needs to take to locate a node) and stores it in the `NODES` section of the
  * current serialized view.
  */
-function appendSerializedNodePath(ngh: SerializedView, tNode: TNode, lView: LView) {
+function appendSerializedNodePath(
+  ngh: SerializedView,
+  tNode: TNode,
+  lView: LView,
+  excludedParentNodes: Set<number> | null,
+) {
   const noOffsetIndex = tNode.index - HEADER_OFFSET;
   ngh[NODES] ??= {};
-  ngh[NODES][noOffsetIndex] = calcPathForNode(tNode, lView);
+  ngh[NODES][noOffsetIndex] = calcPathForNode(tNode, lView, excludedParentNodes);
 }
 
 /**
@@ -226,15 +393,38 @@ function appendDisconnectedNodeIndex(ngh: SerializedView, tNode: TNode) {
 function serializeLView(lView: LView, context: HydrationContext): SerializedView {
   const ngh: SerializedView = {};
   const tView = lView[TVIEW];
+  const i18nChildren = getOrComputeI18nChildren(tView, context);
+  const nativeElementsToEventTypes = context.shouldReplayEvents
+    ? collectDomEventsInfo(tView, lView, context.eventTypesToReplay)
+    : null;
   // Iterate over DOM element references in an LView.
   for (let i = HEADER_OFFSET; i < tView.bindingStartIndex; i++) {
     const tNode = tView.data[i] as TNode;
     const noOffsetIndex = i - HEADER_OFFSET;
-    // Local refs (e.g. <div #localRef>) take up an extra slot in LViews
-    // to store the same element. In this case, there is no information in
-    // a corresponding slot in TNode data structure. If that's the case, just
-    // skip this slot and move to the next one.
-    if (!tNode) {
+
+    // Attempt to serialize any i18n data for the given slot. We do this first, as i18n
+    // has its own process for serialization.
+    const i18nData = trySerializeI18nBlock(lView, i, context);
+    if (i18nData) {
+      ngh[I18N_DATA] ??= {};
+      ngh[I18N_DATA][noOffsetIndex] = i18nData;
+      continue;
+    }
+
+    // Skip processing of a given slot in the following cases:
+    // - Local refs (e.g. <div #localRef>) take up an extra slot in LViews
+    //   to store the same element. In this case, there is no information in
+    //   a corresponding slot in TNode data structure.
+    // - When a slot contains something other than a TNode. For example, there
+    //   might be some metadata information about a defer block or a control flow block.
+    if (!isTNodeShape(tNode)) {
+      continue;
+    }
+
+    // Skip any nodes that are in an i18n block but are considered detached (i.e. not
+    // present in the template). These nodes are disconnected from the DOM tree, and
+    // so we don't want to serialize any information about them.
+    if (isDetachedByI18n(tNode)) {
       continue;
     }
 
@@ -249,6 +439,13 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
       appendDisconnectedNodeIndex(ngh, tNode);
       continue;
     }
+
+    if (nativeElementsToEventTypes) {
+      // Attach `jsaction` attribute to elements that have registered listeners,
+      // thus potentially having a need to do an event replay.
+      setJSActionAttribute(tNode, lView[i], nativeElementsToEventTypes);
+    }
+
     if (Array.isArray(tNode.projection)) {
       for (const projectionHeadTNode of tNode.projection) {
         // We may have `null`s in slots with no projected content.
@@ -259,8 +456,10 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
           // appears at projection location), skip annotations for this content
           // since all DOM nodes in this projection were handled while processing
           // a parent lView, which contains those nodes.
-          if (!isProjectionTNode(projectionHeadTNode) &&
-              !isInSkipHydrationBlock(projectionHeadTNode)) {
+          if (
+            !isProjectionTNode(projectionHeadTNode) &&
+            !isInSkipHydrationBlock(projectionHeadTNode)
+          ) {
             if (isDisconnectedNode(projectionHeadTNode, lView)) {
               // Check whether this node is connected, since we may have a TNode
               // in the data structure as a projection segment head, but the
@@ -268,7 +467,7 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
               // <ng-content *ngIf="false" />).
               appendDisconnectedNodeIndex(ngh, projectionHeadTNode);
             } else {
-              appendSerializedNodePath(ngh, projectionHeadTNode, lView);
+              appendSerializedNodePath(ngh, projectionHeadTNode, lView, i18nChildren);
             }
           }
         } else {
@@ -285,6 +484,9 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
         }
       }
     }
+
+    conditionallyAnnotateNodePath(ngh, tNode, lView, i18nChildren);
+
     if (isLContainer(lView[i])) {
       // Serialize information about a template.
       const embeddedTView = tNode.tView;
@@ -294,7 +496,7 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
       }
 
       // Serialize views within this LContainer.
-      const hostNode = lView[i][HOST]!;  // host node of this container
+      const hostNode = lView[i][HOST]!; // host node of this container
 
       // LView[i][HOST] can be of 2 different types:
       // - either a DOM node
@@ -306,6 +508,7 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
           annotateHostElementForHydration(targetNode, hostNode as LView, context);
         }
       }
+
       ngh[CONTAINERS] ??= {};
       ngh[CONTAINERS][noOffsetIndex] = serializeLContainer(lView[i], context);
     } else if (Array.isArray(lView[i])) {
@@ -328,58 +531,17 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
         // not be able to find an anchor. In this case, use full path instead.
         let nextTNode = tNode.next;
         // Skip over all `<ng-content>` slots in a row.
-        while (nextTNode !== null && (nextTNode.type & TNodeType.Projection)) {
+        while (nextTNode !== null && nextTNode.type & TNodeType.Projection) {
           nextTNode = nextTNode.next;
         }
         if (nextTNode && !isInSkipHydrationBlock(nextTNode)) {
           // Handle a tNode after the `<ng-content>` slot.
-          appendSerializedNodePath(ngh, nextTNode, lView);
+          appendSerializedNodePath(ngh, nextTNode, lView, i18nChildren);
         }
       } else {
-        // Handle cases where text nodes can be lost after DOM serialization:
-        //  1. When there is an *empty text node* in DOM: in this case, this
-        //     node would not make it into the serialized string and as a result,
-        //     this node wouldn't be created in a browser. This would result in
-        //     a mismatch during the hydration, where the runtime logic would expect
-        //     a text node to be present in live DOM, but no text node would exist.
-        //     Example: `<span>{{ name }}</span>` when the `name` is an empty string.
-        //     This would result in `<span></span>` string after serialization and
-        //     in a browser only the `span` element would be created. To resolve that,
-        //     an extra comment node is appended in place of an empty text node and
-        //     that special comment node is replaced with an empty text node *before*
-        //     hydration.
-        //  2. When there are 2 consecutive text nodes present in the DOM.
-        //     Example: `<div>Hello <ng-container *ngIf="true">world</ng-container></div>`.
-        //     In this scenario, the live DOM would look like this:
-        //       <div>#text('Hello ') #text('world') #comment('container')</div>
-        //     Serialized string would look like this: `<div>Hello world<!--container--></div>`.
-        //     The live DOM in a browser after that would be:
-        //       <div>#text('Hello world') #comment('container')</div>
-        //     Notice how 2 text nodes are now "merged" into one. This would cause hydration
-        //     logic to fail, since it'd expect 2 text nodes being present, not one.
-        //     To fix this, we insert a special comment node in between those text nodes, so
-        //     serialized representation is: `<div>Hello <!--ngtns-->world<!--container--></div>`.
-        //     This forces browser to create 2 text nodes separated by a comment node.
-        //     Before running a hydration process, this special comment node is removed, so the
-        //     live DOM has exactly the same state as it was before serialization.
         if (tNode.type & TNodeType.Text) {
-          const rNode = unwrapRNode(lView[i]) as HTMLElement;
-          // Collect this node as required special annotation only when its
-          // contents is empty. Otherwise, such text node would be present on
-          // the client after server-side rendering and no special handling needed.
-          if (rNode.textContent === '') {
-            context.corruptedTextNodes.set(rNode, TextNodeMarker.EmptyNode);
-          } else if (rNode.nextSibling?.nodeType === Node.TEXT_NODE) {
-            context.corruptedTextNodes.set(rNode, TextNodeMarker.Separator);
-          }
-        }
-
-        if (tNode.projectionNext && tNode.projectionNext !== tNode.next &&
-            !isInSkipHydrationBlock(tNode.projectionNext)) {
-          // Check if projection next is not the same as next, in which case
-          // the node would not be found at creation time at runtime and we
-          // need to provide a location for that node.
-          appendSerializedNodePath(ngh, tNode.projectionNext, lView);
+          const rNode = unwrapRNode(lView[i]);
+          processTextNodeBeforeSerialization(context, rNode);
         }
       }
     }
@@ -388,14 +550,55 @@ function serializeLView(lView: LView, context: HydrationContext): SerializedView
 }
 
 /**
+ * Serializes node location in cases when it's needed, specifically:
+ *
+ *  1. If `tNode.projectionNext` is different from `tNode.next` - it means that
+ *     the next `tNode` after projection is different from the one in the original
+ *     template. Since hydration relies on `tNode.next`, this serialized info
+ *     is required to help runtime code find the node at the correct location.
+ *  2. In certain content projection-based use-cases, it's possible that only
+ *     a content of a projected element is rendered. In this case, content nodes
+ *     require an extra annotation, since runtime logic can't rely on parent-child
+ *     connection to identify the location of a node.
+ */
+function conditionallyAnnotateNodePath(
+  ngh: SerializedView,
+  tNode: TNode,
+  lView: LView<unknown>,
+  excludedParentNodes: Set<number> | null,
+) {
+  // Handle case #1 described above.
+  if (
+    tNode.projectionNext &&
+    tNode.projectionNext !== tNode.next &&
+    !isInSkipHydrationBlock(tNode.projectionNext)
+  ) {
+    appendSerializedNodePath(ngh, tNode.projectionNext, lView, excludedParentNodes);
+  }
+
+  // Handle case #2 described above.
+  // Note: we only do that for the first node (i.e. when `tNode.prev === null`),
+  // the rest of the nodes would rely on the current node location, so no extra
+  // annotation is needed.
+  if (
+    tNode.prev === null &&
+    tNode.parent !== null &&
+    isDisconnectedNode(tNode.parent, lView) &&
+    !isDisconnectedNode(tNode, lView)
+  ) {
+    appendSerializedNodePath(ngh, tNode, lView, excludedParentNodes);
+  }
+}
+
+/**
  * Determines whether a component instance that is represented
  * by a given LView uses `ViewEncapsulation.ShadowDom`.
  */
 function componentUsesShadowDomEncapsulation(lView: LView): boolean {
   const instance = lView[CONTEXT];
-  return instance?.constructor ?
-      getComponentDef(instance.constructor)?.encapsulation === ViewEncapsulation.ShadowDom :
-      false;
+  return instance?.constructor
+    ? getComponentDef(instance.constructor)?.encapsulation === ViewEncapsulation.ShadowDom
+    : false;
 }
 
 /**
@@ -408,21 +611,31 @@ function componentUsesShadowDomEncapsulation(lView: LView): boolean {
  * @param element The Host element to be annotated
  * @param lView The associated LView
  * @param context The hydration context
+ * @returns An index of serialized view from the transfer state object
+ *          or `null` when a given component can not be serialized.
  */
 function annotateHostElementForHydration(
-    element: RElement, lView: LView, context: HydrationContext): void {
+  element: RElement,
+  lView: LView,
+  context: HydrationContext,
+): number | null {
   const renderer = lView[RENDERER];
-  if (hasI18n(lView) || componentUsesShadowDomEncapsulation(lView)) {
+  if (
+    (hasI18n(lView) && !isI18nHydrationSupportEnabled()) ||
+    componentUsesShadowDomEncapsulation(lView)
+  ) {
     // Attach the skip hydration attribute if this component:
     // - either has i18n blocks, since hydrating such blocks is not yet supported
     // - or uses ShadowDom view encapsulation, since Domino doesn't support
     //   shadow DOM, so we can not guarantee that client and server representations
     //   would exactly match
     renderer.setAttribute(element, SKIP_HYDRATION_ATTR_NAME, '');
+    return null;
   } else {
     const ngh = serializeLView(lView, context);
     const index = context.serializedViewCollection.add(ngh);
     renderer.setAttribute(element, NGH_ATTR_NAME, index.toString());
+    return index;
   }
 }
 
@@ -436,7 +649,9 @@ function annotateHostElementForHydration(
  * @param doc The document
  */
 function insertCorruptedTextNodeMarkers(
-    corruptedTextNodes: Map<HTMLElement, string>, doc: Document) {
+  corruptedTextNodes: Map<HTMLElement, string>,
+  doc: Document,
+) {
   for (const [textNode, marker] of corruptedTextNodes) {
     textNode.after(doc.createComment(marker));
   }
@@ -457,16 +672,4 @@ function isContentProjectedNode(tNode: TNode): boolean {
     currentTNode = currentTNode.parent as TNode;
   }
   return false;
-}
-
-/**
- * Check whether a given node exists, but is disconnected from the DOM.
- *
- * Note: we leverage the fact that we have this information available in the DOM emulation
- * layer (in Domino) for now. Longer-term solution should not rely on the DOM emulation and
- * only use internal data structures and state to compute this information.
- */
-function isDisconnectedNode(tNode: TNode, lView: LView) {
-  return !(tNode.type & TNodeType.Projection) && !!lView[tNode.index] &&
-      !(unwrapRNode(lView[tNode.index]) as Node).isConnected;
 }

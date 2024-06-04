@@ -57,9 +57,7 @@
 version: 3
 
 availability:
-  users_unavailable:
-    - atscott
-    - devversion
+  users_unavailable: []
 
 # Meta field that goes unused by PullApprove to allow for defining aliases to be
 # used throughout the config.
@@ -142,7 +140,7 @@ groups:
         - alxhub
         - crisbeto
         - ~jelbourn
-        - jessicajaniuk
+        - thePunderWoman
 
   # =========================================================
   #  Framework: Compiler
@@ -168,8 +166,9 @@ groups:
         - AndrewKushnir
         - atscott
         - crisbeto
-        - JoostK
+        - devversion
         - dylhunn
+        - JoostK
 
   # =========================================================
   #  Framework: Migrations
@@ -184,6 +183,8 @@ groups:
         - crisbeto
         - devversion
         - dylhunn
+        - thePunderWoman
+        - AndrewKushnir
 
   # =========================================================
   #  Framework: Core
@@ -192,7 +193,7 @@ groups:
     <<: *defaults
     conditions:
       - >
-        contains_any_globs(files.exclude("packages/core/schematics/*"), [
+        contains_any_globs(files.exclude("packages/core/schematics/*").exclude('packages/core/primitives/*'), [
           'packages/core/**/{*,.*}',
           'packages/examples/core/**/{*,.*}',
           'packages/platform-browser/**/{*,.*}',
@@ -313,6 +314,7 @@ groups:
           'aio/content/guide/pipes.md',
           'aio/content/guide/pipes-custom-data-trans.md',
           'aio/content/guide/pipes-overview.md',
+          'aio/content/guide/pipe-precedence.md',
           'aio/content/guide/pipes-transform-data.md',
           'aio/content/guide/pipe-template.md',
           'aio/content/examples/pipes/**/{*,.*}',
@@ -320,7 +322,9 @@ groups:
           'aio/content/guide/providers.md',
           'aio/content/examples/providers/**/{*,.*}',
           'aio/content/images/guide/providers/**/{*,.*}',
+          'aio/content/guide/signal-queries.md',
           'aio/content/guide/singleton-services.md',
+          'aio/content/guide/signal-inputs.md',
           'aio/content/guide/sharing-ngmodules.md',
           'aio/content/guide/standalone-components.md',
           'aio/content/guide/standalone-migration.md',
@@ -338,8 +342,13 @@ groups:
           'aio/content/examples/view-encapsulation/**/{*,.*}',
           'aio/content/images/guide/view-encapsulation/**/{*,.*}',
           'aio/content/special-elements/**/{*,.*}',
+          'aio/content/blocks/**/{*,.*}',
           'aio/content/guide/hydration.md',
-          'aio/content/guide/signals.md'
+          'aio/content/guide/defer.md',
+          'aio/content/guide/signals.md',
+          'aio/content/guide/control_flow.md',
+          'aio/content/guide/model-inputs.md',
+          'aio/content/examples/injection-token/**/{*,.*}',
           ])
     reviewers:
       users:
@@ -347,8 +356,9 @@ groups:
         - AndrewKushnir
         - atscott
         - crisbeto
+        - devversion
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -368,7 +378,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -405,7 +415,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -428,7 +438,7 @@ groups:
         - andrewseguin
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -516,8 +526,8 @@ groups:
         contains_any_globs(files, [
           'packages/platform-server/**/{*,.*}',
           'aio/content/guide/prerendering.md',
-          'aio/content/guide/universal.md',
-          'aio/content/examples/universal/**/{*,.*}'
+          'aio/content/guide/ssr.md',
+          'aio/content/examples/ssr/**/{*,.*}',
           ])
     reviewers:
       users:
@@ -526,7 +536,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -605,7 +615,7 @@ groups:
     reviewers:
       users:
         - alxhub
-        - jessicajaniuk
+        - thePunderWoman
 
   # =========================================================
   #  Framework: Testing
@@ -634,7 +644,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -653,7 +663,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -672,7 +682,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -736,6 +746,7 @@ groups:
       users:
         - alxhub
         - atscott
+        - dylhunn
 
   # =========================================================
   #  zone.js
@@ -768,7 +779,7 @@ groups:
         - atscott
         - crisbeto
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   # =========================================================
@@ -803,7 +814,7 @@ groups:
         - AndrewKushnir
         - atscott
         - dylhunn
-        - jessicajaniuk
+        - thePunderWoman
         - josephperrott
         - pkozlowski-opensource
 
@@ -857,7 +868,7 @@ groups:
     reviewers:
       users:
         - AndrewKushnir
-        - jessicajaniuk
+        - thePunderWoman
 
   # =========================================================
   #  Docs: Marketing
@@ -929,12 +940,14 @@ groups:
           'aio/content/guide/update-to-version-14.md',
           'aio/content/guide/update-to-version-15.md',
           'aio/content/guide/update-to-version-16.md',
+          'aio/content/guide/update-to-version-17.md',
           ])
     reviewers:
       users:
         - alxhub
         - AndrewKushnir
         - atscott
+        - thePunderWoman
         - jelbourn
 
   # =========================================================
@@ -1052,6 +1065,31 @@ groups:
         - mgechev
 
   # =========================================================
+  #  Docs: Angular Dev Site
+  # =========================================================
+  angular-dev:
+    <<: *defaults
+    conditions:
+      - >
+        contains_any_globs(files, [
+          'adev/**/{.*,*}'
+          ])
+    reviewers:
+      users:
+        - josephperrott
+        - jelbourn
+        - bencodezen
+        - thePunderWoman
+        - dylhunn
+        - AndrewKushnir
+        - alxhub
+        - crisbeto
+        - devversion
+        - atscott
+        - pkozlowski-opensource
+        - ~JeanMeche
+
+  # =========================================================
   #  Docs-infra
   # =========================================================
   docs-infra:
@@ -1107,7 +1145,7 @@ groups:
     reviewers:
       users:
         - AndrewKushnir
-        - jessicajaniuk
+        - thePunderWoman
         - josephperrott
 
   # =========================================================
@@ -1124,9 +1162,11 @@ groups:
       users:
         - AleksanderBodurri
         - devversion
+        - dgp1130
         - josephperrott
         - mgechev
         - twerske
+        - ~JeanMeche
 
   # =========================================================
   #  Dev-infra
@@ -1161,9 +1201,11 @@ groups:
           'tools/esm-interop/**/{*,.*}',
           'tools/gulp-tasks/**/{*,.*}',
           'tools/legacy-saucelabs/**/{*,.*}',
+          'tools/manual_api_docs/**/{*,.*}',
+          'tools/npm-patches/**/{*,.*}',
           'tools/rxjs/**/{*,.*}',
-          'tools/saucelabs/**/{*,.*}',
           'tools/saucelabs-daemon/**/{*,.*}',
+          'tools/saucelabs/**/{*,.*}',
           'tools/symbol-extractor/**/{*,.*}',
           'tools/testing/**/{*,.*}',
           'tools/tslint/**/{*,.*}',
@@ -1202,7 +1244,7 @@ groups:
         - atscott
         - dylhunn
         - ~jelbourn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
     reviews:
       request: 3 # Request reviews from 3 people
@@ -1228,7 +1270,7 @@ groups:
         - atscott
         - dylhunn
         - ~jelbourn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
     reviews:
       request: 2 # Request reviews from 2 people
@@ -1254,7 +1296,7 @@ groups:
         - atscott
         - dylhunn
         - ~jelbourn
-        - jessicajaniuk
+        - thePunderWoman
         - pkozlowski-opensource
 
   ####################################################################################
@@ -1278,8 +1320,61 @@ groups:
         - andrewseguin
         - dgp1130
         - ~jelbourn
-        - jessicajaniuk
+        - thePunderWoman
         - josephperrott
+
+  # =========================================================
+  #  Primitives
+  # =========================================================
+
+  # Angular team required reviews
+  primitives:
+    <<: *defaults
+    conditions:
+      - >
+        contains_any_globs(files, [
+          'packages/core/primitives/**/{*,.*}',
+        ])
+    reviewers:
+      users:
+        - pkozlowski-opensource # Pawel Kozlowski
+        - alxhub # Alex Rickabaugh
+        - thePunderWoman # Jessica Janiuk
+        - dylhunn # Dylan Hunn
+        - AndrewKushnir # Andrew Kushnir
+        - atscott # Andrew Scott
+    labels:
+      pending: 'requires: TGP'
+      approved: 'requires: TGP'
+      rejected: 'requires: TGP'
+
+  # External team required reviews
+  primitives-shared:
+    <<: *defaults
+    conditions:
+      - >
+        contains_any_globs(files, [
+          'packages/core/primitives/**/{*,.*}',
+        ])
+    reviewers:
+      users:
+        - csmick # Cameron Smick
+        - lannka # Hongfei Ding
+        - eduhmc # Eduardo Huerta-Mercado
+        - ehlemur # Edward Lesmes
+        - ellenyuan # Ellen Yuan
+        - jatraman # Jatin Ramanathan
+        - jesse-good # Jesse Costello-Good
+        - mturco # Matt Turco
+        - neonstalwart # Ben Hockey
+        - nicholasyu-google # Nicholas Yu
+        - iteriani # Thomas Nguyen
+        - tbondwilkinson # Tom Wilkinson
+        - rahatarmanahmed # Rahat Ahmed
+    labels:
+      pending: 'requires: TGP'
+      approved: 'requires: TGP'
+      rejected: 'requires: TGP'
 
   ####################################################################################
   # Override managed result groups
@@ -1357,26 +1452,6 @@ groups:
       author_value: 0 # The author of the PR cannot provide an approval for themself
       reviewed_for: ignored # All reviews apply to this group whether noted via Reviewed-for or not
     reviewers:
-      users:
-        - alan-agius4 # Alan Agius
-        - AleksanderBodurri # Aleksander Bodurri
-        - alxhub # Alex Rickabaugh
-        - AndrewKushnir # Andrew Kushnir
-        - andrewseguin # Andrew Seguin
-        - atscott # Andrew Scott
-        - clydin # Charles Lyding
-        - crisbeto # Kristiyan Kostadinov
-        - devversion # Paul Gschwendtner
-        - dgp1130 # Doug Parker
-        - dylhunn # Dylan Hunn
-        - jelbourn # Jeremy Elbourn
-        - jessicajaniuk # Jessica Janiuk
-        - JiaLiPassion # Jia Li
-        - JoostK # Joost Koehoorn
-        - josephperrott # Joey Perrott
-        - MarkTechson # Mark Thompson (Techson)
-        - mgechev # Minko Gechev
-        - mmalerba # Miles Malerba
-        - pkozlowski-opensource # Pawel Kozlowski
-        - twerske # Emma Twersky
-        - zarend # Zach Arend
+      teams:
+        # Any member of the team can provide a review to perform the minimum review required
+        - team
