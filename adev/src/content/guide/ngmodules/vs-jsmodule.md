@@ -14,7 +14,7 @@ For the module specification, see the [6th Edition of the ECMAScript standard](h
 To make the code in a JavaScript module available to other modules, use an `export` statement at the end of the relevant code in the module, such as the following:
 
 <docs-code language="typescript">
-export class AppComponent { &hellip; }
+export class AppComponent { … }
 </docs-code>
 
 When you need that module's code in another module, use an `import` statement as follows:
@@ -44,7 +44,7 @@ An NgModule can export only the declarable classes it owns or imports from other
 It doesn't declare or export any other kind of class.
 Declarables are the only classes that matter to the Angular compilation process.
 
-For a complete description of the NgModule metadata properties, see [Using the NgModule metadata](/guide/ngmodules/api "Using the NgModule metadata").
+For a complete description of the NgModule metadata properties, see [Using the NgModule metadata](guide/ngmodules/api "Using the NgModule metadata").
 
 ## An example that uses both
 
@@ -82,5 +82,5 @@ It then configures the `@NgModule` with the following arrays:
 
 ## Next steps
 
-* To learn more about the root NgModule, see [Launching an app with a root NgModule](/guide/ngmodules/bootstrapping "Launching an app with a root NgModule").
-* To learn about frequently used Angular NgModules and how to import them into your app, see [Frequently-used modules](/guide/ngmodules/frequent "Frequently-used modules").
+* To learn more about the root NgModule, see [Launching an app with a root NgModule](guide/ngmodules/bootstrapping "Launching an app with a root NgModule").
+* To learn about frequently used Angular NgModules and how to import them into your app, see [Frequently-used modules](guide/ngmodules/frequent "Frequently-used modules").

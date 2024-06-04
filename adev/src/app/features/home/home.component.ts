@@ -21,15 +21,16 @@ import {
   inject,
 } from '@angular/core';
 import {WINDOW, shouldReduceMotion, isIos} from '@angular/docs';
-import {RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 
 import {injectAsync} from '../../core/services/inject-async';
 
 import {CodeEditorComponent} from './components/home-editor.component';
 
-import {TUTORIALS_HOMEPAGE_DIRECTORY} from '../../../../../../scripts/tutorials/utils/web-constants';
 import {HEADER_CLASS_NAME} from './home-animation-constants';
 import type {HomeAnimation} from './services/home-animation.service';
+
+export const TUTORIALS_HOMEPAGE_DIRECTORY = 'homepage';
 
 @Component({
   standalone: true,
@@ -47,8 +48,10 @@ export default class Home implements OnInit, AfterViewInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly window = inject(WINDOW);
+  private readonly activatedRoute = inject(ActivatedRoute);
 
   protected readonly tutorialFiles = TUTORIALS_HOMEPAGE_DIRECTORY;
+  protected readonly isUwu = 'uwu' in this.activatedRoute.snapshot.queryParams;
   private element!: HTMLDivElement;
   private homeAnimation?: HomeAnimation;
   private intersectionObserver: IntersectionObserver | undefined;
@@ -67,13 +70,13 @@ export default class Home implements OnInit, AfterViewInit, OnDestroy {
 
     if (isPlatformBrowser(this.platformId)) {
       // Always scroll to top on home page (even for navigating back)
-      this.window.scrollTo({top: 0, left: 0, behavior: 'instant' as any});
+      this.window.scrollTo({top: 0, left: 0, behavior: 'instant'});
 
       // Create a single intersection observer used for disabling the animation
       // at the end of the page, and to load the embedded editor.
       this.initIntersectionObserver();
 
-      if (this.isWebGLAvailable() && !shouldReduceMotion()) {
+      if (this.isWebGLAvailable() && !shouldReduceMotion() && !this.isUwu) {
         this.ngZone.runOutsideAngular(async () => {
           await this.loadHomeAnimation();
         });

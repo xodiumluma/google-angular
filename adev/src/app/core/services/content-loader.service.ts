@@ -10,7 +10,8 @@ import {HttpClient} from '@angular/common/http';
 import {Injectable, inject} from '@angular/core';
 import {DocContent, DocsContentLoader} from '@angular/docs';
 import {Router} from '@angular/router';
-import {firstValueFrom, map} from 'rxjs';
+import {firstValueFrom} from 'rxjs';
+import {map} from 'rxjs/operators';
 
 @Injectable()
 export class ContentLoader implements DocsContentLoader {

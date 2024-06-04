@@ -22,7 +22,8 @@ export function generateAdvance(job: CompilationJob): void {
         continue;
       } else if (op.handle.slot === null) {
         throw new Error(
-            `AssertionError: expected slots to have been allocated before generating advance() calls`);
+          `AssertionError: expected slots to have been allocated before generating advance() calls`,
+        );
       }
 
       slotMap.set(op.xref, op.handle.slot);
@@ -41,7 +42,7 @@ export function generateAdvance(job: CompilationJob): void {
       } else if (!slotMap.has(op.target)) {
         // We expect ops that _do_ depend on the slot counter to point at declarations that exist in
         // the `slotMap`.
-        throw new Error(`AssertionError: reference to unknown slot for var ${op.target}`);
+        throw new Error(`AssertionError: reference to unknown slot for target ${op.target}`);
       }
 
       const slot = slotMap.get(op.target)!;
@@ -55,7 +56,9 @@ export function generateAdvance(job: CompilationJob): void {
         }
 
         ir.OpList.insertBefore<ir.UpdateOp>(
-            ir.createAdvanceOp(delta, (op as ir.DependsOnSlotContextOpTrait).sourceSpan), op);
+          ir.createAdvanceOp(delta, (op as ir.DependsOnSlotContextOpTrait).sourceSpan),
+          op,
+        );
         slotContext = slot;
       }
     }

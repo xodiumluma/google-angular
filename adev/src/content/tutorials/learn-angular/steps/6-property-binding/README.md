@@ -4,7 +4,7 @@ Property binding in Angular enables you to set values for properties of HTML ele
 
 Use property binding to dynamically set values for properties and attributes. You can do things such as toggle button features, set image paths programmatically, and share values between components.
 
-In this activity, you'll learn to use property binding in templates.
+In this activity, you'll learn how to use property binding in templates.
 
 <hr />
 
@@ -43,4 +43,4 @@ Next, bind the `contentEditable` attribute of the `div` to the `isEditable` prop
 
 The div is now editable. Nice work 👍
 
-Property binding is one of Angular's many powerful features. If you'd like to learn more checkout [the Angular documention](/guide/templates/property-binding).
+Property binding is one of Angular's many powerful features. If you'd like to learn more checkout [the Angular documentation](guide/templates/property-binding).

@@ -28,6 +28,10 @@ Like the `async` pipe, `toSignal` subscribes to the Observable immediately, whic
 
 IMPORTANT: `toSignal` creates a subscription. You should avoid calling it repeatedly for the same Observable, and instead reuse the signal it returns.
 
+### Injection context
+
+`toSignal` by default needs to run in an [injection context](guide/di/dependency-injection-context), such as during construction of a component or service. If an injection context is not available, you can manually specify the `Injector` to use instead.
+
 ### Initial values
 
 Observables may not produce a value synchronously on subscription, but signals always require a current value. There are several ways to deal with this "initial" value of `toSignal` signals.
@@ -98,3 +102,29 @@ mySignal.set(3);
 ```
 
 Here, only the last value (3) will be logged.
+
+### `outputFromObservable`
+
+`outputFromObservable(...)` declares an Angular output that emits values based on an RxJS observable.
+
+```ts
+class MyDir {
+  nameChange$ = new Observable<string>(/* ... */);
+  nameChange = outputFromObservable(this.nameChange$); // OutputRef<string>
+}
+```
+
+See more details in the [output() API guide](/guide/components/output-fn).
+
+### `outputToObservable`
+
+`outputToObservable(...)` converts an Angular output to an observable.
+This allows you use integrate Angular outputs conveniently into RxJS streams.
+
+```ts
+outputToObservable(myComp.instance.onNameChange)
+  .pipe(...)
+  .subscribe(...)
+```
+
+See more details in the [output() API guide](/guide/components/output-fn).

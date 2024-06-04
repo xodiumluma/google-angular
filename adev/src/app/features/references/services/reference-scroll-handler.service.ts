@@ -18,7 +18,8 @@ import {
   signal,
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {auditTime, fromEvent} from 'rxjs';
+import {fromEvent} from 'rxjs';
+import {auditTime} from 'rxjs/operators';
 import {
   API_REFERENCE_DETAILS_PAGE_MEMBERS_CLASS_NAME,
   API_REFERENCE_MEMBER_CARD_CLASS_NAME,
@@ -166,6 +167,7 @@ export class ReferenceScrollHandler implements OnDestroy, ReferenceScrollHandler
       for (const line of Array.from(lines)) {
         line.classList.add(API_TAB_ACTIVE_CODE_LINE);
       }
+      this.document.getElementById(`${currentActiveMemberId}`)?.focus({preventScroll: true});
     }
   }
 
@@ -174,7 +176,9 @@ export class ReferenceScrollHandler implements OnDestroy, ReferenceScrollHandler
       return;
     }
 
-    card.focus();
+    if (card !== <HTMLElement>document.activeElement) {
+      (<HTMLElement>document.activeElement).blur();
+    }
 
     this.window.scrollTo({
       top: card!.offsetTop - this.membersMarginTopInPx(),
@@ -206,8 +210,9 @@ export class ReferenceScrollHandler implements OnDestroy, ReferenceScrollHandler
 
     this.resizeObserver = new ResizeObserver((_) => {
       this.ngZone.run(() => {
-        if (tabBody.offsetTop) {
-          this.membersMarginTopInPx.set(tabBody.offsetTop);
+        const offsetTop = tabBody.getBoundingClientRect().top;
+        if (offsetTop) {
+          this.membersMarginTopInPx.set(offsetTop);
         }
       });
     });

@@ -11,7 +11,13 @@ import * as o from '../../../../src/output/output_ast';
 import {ConstantPool} from '../../../constant_pool';
 import * as ir from '../ir';
 
-import {CompilationJob, CompilationJobKind as Kind, type ComponentCompilationJob, type HostBindingCompilationJob, type ViewCompilationUnit} from './compilation';
+import {
+  CompilationJob,
+  CompilationJobKind as Kind,
+  type ComponentCompilationJob,
+  type HostBindingCompilationJob,
+  type ViewCompilationUnit,
+} from './compilation';
 
 import {deleteAnyCasts} from './phases/any_cast';
 import {applyI18nExpressions} from './phases/apply_i18n_expressions';
@@ -22,8 +28,10 @@ import {chain} from './phases/chaining';
 import {collapseSingletonInterpolations} from './phases/collapse_singleton_interpolations';
 import {generateConditionalExpressions} from './phases/conditionals';
 import {collectElementConsts} from './phases/const_collection';
-import {createDeferDepsFns} from './phases/create_defer_deps_fns';
+import {convertI18nBindings} from './phases/convert_i18n_bindings';
+import {resolveDeferDepsFns} from './phases/resolve_defer_deps_fns';
 import {createI18nContexts} from './phases/create_i18n_contexts';
+import {deduplicateTextBindings} from './phases/deduplicate_text_bindings';
 import {configureDeferInstructions} from './phases/defer_configs';
 import {resolveDeferTargetNames} from './phases/defer_resolve_targets';
 import {collapseEmptyInstructions} from './phases/empty_elements';
@@ -35,7 +43,7 @@ import {generateVariables} from './phases/generate_variables';
 import {collectConstExpressions} from './phases/has_const_expression_collection';
 import {parseHostStyleProperties} from './phases/host_style_property_parsing';
 import {collectI18nConsts} from './phases/i18n_const_collection';
-import {extractI18nText} from './phases/i18n_text_extraction';
+import {convertI18nText} from './phases/i18n_text_extraction';
 import {liftLocalRefs} from './phases/local_refs';
 import {emitNamespaceChanges} from './phases/namespace';
 import {nameFunctionsAndVariables} from './phases/naming';
@@ -54,14 +62,14 @@ import {generatePureLiteralStructures} from './phases/pure_literal_structures';
 import {reify} from './phases/reify';
 import {removeEmptyBindings} from './phases/remove_empty_bindings';
 import {removeI18nContexts} from './phases/remove_i18n_contexts';
-import {generateRepeaterDerivedVars} from './phases/repeater_derived_vars';
+import {removeUnusedI18nAttributesOps} from './phases/remove_unused_i18n_attrs';
 import {resolveContexts} from './phases/resolve_contexts';
 import {resolveDollarEvent} from './phases/resolve_dollar_event';
 import {resolveI18nElementPlaceholders} from './phases/resolve_i18n_element_placeholders';
 import {resolveI18nExpressionPlaceholders} from './phases/resolve_i18n_expression_placeholders';
-import {resolveI18nIcuPlaceholders} from './phases/resolve_i18n_icu_placeholders';
 import {resolveNames} from './phases/resolve_names';
 import {resolveSanitizers} from './phases/resolve_sanitizers';
+import {transformTwoWayBindingSet} from './phases/transform_two_way_binding_set';
 import {saveAndRestoreView} from './phases/save_restore_view';
 import {allocateSlots} from './phases/slot_allocation';
 import {specializeStyleBindings} from './phases/style_binding_specialization';
@@ -73,27 +81,31 @@ import {countVariables} from './phases/var_counting';
 import {optimizeVariables} from './phases/variable_optimization';
 import {wrapI18nIcus} from './phases/wrap_icus';
 
-type Phase = {
-  fn: (job: CompilationJob) => void; kind: Kind.Both | Kind.Host | Kind.Tmpl;
-}|{
-  fn: (job: ComponentCompilationJob) => void;
-  kind: Kind.Tmpl;
-}
-|{
-  fn: (job: HostBindingCompilationJob) => void;
-  kind: Kind.Host;
-};
+type Phase =
+  | {
+      fn: (job: CompilationJob) => void;
+      kind: Kind.Both | Kind.Host | Kind.Tmpl;
+    }
+  | {
+      fn: (job: ComponentCompilationJob) => void;
+      kind: Kind.Tmpl;
+    }
+  | {
+      fn: (job: HostBindingCompilationJob) => void;
+      kind: Kind.Host;
+    };
 
 const phases: Phase[] = [
   {kind: Kind.Tmpl, fn: removeContentSelectors},
   {kind: Kind.Host, fn: parseHostStyleProperties},
   {kind: Kind.Tmpl, fn: emitNamespaceChanges},
-  {kind: Kind.Both, fn: specializeStyleBindings},
-  {kind: Kind.Both, fn: specializeBindings},
   {kind: Kind.Tmpl, fn: propagateI18nBlocks},
   {kind: Kind.Tmpl, fn: wrapI18nIcus},
-  {kind: Kind.Tmpl, fn: createI18nContexts},
+  {kind: Kind.Both, fn: deduplicateTextBindings},
+  {kind: Kind.Both, fn: specializeStyleBindings},
+  {kind: Kind.Both, fn: specializeBindings},
   {kind: Kind.Both, fn: extractAttributes},
+  {kind: Kind.Tmpl, fn: createI18nContexts},
   {kind: Kind.Both, fn: parseExtractedStyles},
   {kind: Kind.Tmpl, fn: removeEmptyBindings},
   {kind: Kind.Both, fn: collapseSingletonInterpolations},
@@ -101,42 +113,43 @@ const phases: Phase[] = [
   {kind: Kind.Tmpl, fn: generateConditionalExpressions},
   {kind: Kind.Tmpl, fn: createPipes},
   {kind: Kind.Tmpl, fn: configureDeferInstructions},
-  {kind: Kind.Tmpl, fn: extractI18nText},
+  {kind: Kind.Tmpl, fn: convertI18nText},
+  {kind: Kind.Tmpl, fn: convertI18nBindings},
+  {kind: Kind.Tmpl, fn: removeUnusedI18nAttributesOps},
+  {kind: Kind.Tmpl, fn: assignI18nSlotDependencies},
   {kind: Kind.Tmpl, fn: applyI18nExpressions},
   {kind: Kind.Tmpl, fn: createVariadicPipes},
   {kind: Kind.Both, fn: generatePureLiteralStructures},
   {kind: Kind.Tmpl, fn: generateProjectionDefs},
   {kind: Kind.Tmpl, fn: generateVariables},
   {kind: Kind.Tmpl, fn: saveAndRestoreView},
-  {kind: Kind.Tmpl, fn: deleteAnyCasts},
+  {kind: Kind.Both, fn: deleteAnyCasts},
   {kind: Kind.Both, fn: resolveDollarEvent},
-  {kind: Kind.Tmpl, fn: generateRepeaterDerivedVars},
   {kind: Kind.Tmpl, fn: generateTrackVariables},
   {kind: Kind.Both, fn: resolveNames},
   {kind: Kind.Tmpl, fn: resolveDeferTargetNames},
+  {kind: Kind.Tmpl, fn: transformTwoWayBindingSet},
   {kind: Kind.Tmpl, fn: optimizeTrackFns},
   {kind: Kind.Both, fn: resolveContexts},
-  {kind: Kind.Tmpl, fn: resolveSanitizers},  // TODO: run in both
+  {kind: Kind.Both, fn: resolveSanitizers},
   {kind: Kind.Tmpl, fn: liftLocalRefs},
   {kind: Kind.Both, fn: generateNullishCoalesceExpressions},
   {kind: Kind.Both, fn: expandSafeReads},
   {kind: Kind.Both, fn: generateTemporaryVariables},
+  {kind: Kind.Both, fn: optimizeVariables},
   {kind: Kind.Tmpl, fn: allocateSlots},
-  {kind: Kind.Tmpl, fn: createDeferDepsFns},
   {kind: Kind.Tmpl, fn: resolveI18nElementPlaceholders},
   {kind: Kind.Tmpl, fn: resolveI18nExpressionPlaceholders},
-  {kind: Kind.Tmpl, fn: resolveI18nIcuPlaceholders},
   {kind: Kind.Tmpl, fn: extractI18nMessages},
   {kind: Kind.Tmpl, fn: generateTrackFns},
   {kind: Kind.Tmpl, fn: collectI18nConsts},
   {kind: Kind.Tmpl, fn: collectConstExpressions},
   {kind: Kind.Both, fn: collectElementConsts},
-  {kind: Kind.Tmpl, fn: assignI18nSlotDependencies},
   {kind: Kind.Tmpl, fn: removeI18nContexts},
   {kind: Kind.Both, fn: countVariables},
   {kind: Kind.Tmpl, fn: generateAdvance},
-  {kind: Kind.Both, fn: optimizeVariables},
   {kind: Kind.Both, fn: nameFunctionsAndVariables},
+  {kind: Kind.Tmpl, fn: resolveDeferDepsFns},
   {kind: Kind.Tmpl, fn: mergeNextContextExpressions},
   {kind: Kind.Tmpl, fn: generateNgContainerOps},
   {kind: Kind.Tmpl, fn: collapseEmptyInstructions},
@@ -196,16 +209,22 @@ function emitView(view: ViewCompilationUnit): o.FunctionExpr {
   const createStatements: o.Statement[] = [];
   for (const op of view.create) {
     if (op.kind !== ir.OpKind.Statement) {
-      throw new Error(`AssertionError: expected all create ops to have been compiled, but got ${
-          ir.OpKind[op.kind]}`);
+      throw new Error(
+        `AssertionError: expected all create ops to have been compiled, but got ${
+          ir.OpKind[op.kind]
+        }`,
+      );
     }
     createStatements.push(op.statement);
   }
   const updateStatements: o.Statement[] = [];
   for (const op of view.update) {
     if (op.kind !== ir.OpKind.Statement) {
-      throw new Error(`AssertionError: expected all update ops to have been compiled, but got ${
-          ir.OpKind[op.kind]}`);
+      throw new Error(
+        `AssertionError: expected all update ops to have been compiled, but got ${
+          ir.OpKind[op.kind]
+        }`,
+      );
     }
     updateStatements.push(op.statement);
   }
@@ -213,15 +232,12 @@ function emitView(view: ViewCompilationUnit): o.FunctionExpr {
   const createCond = maybeGenerateRfBlock(1, createStatements);
   const updateCond = maybeGenerateRfBlock(2, updateStatements);
   return o.fn(
-      [
-        new o.FnParam('rf'),
-        new o.FnParam('ctx'),
-      ],
-      [
-        ...createCond,
-        ...updateCond,
-      ],
-      /* type */ undefined, /* sourceSpan */ undefined, view.fnName);
+    [new o.FnParam('rf'), new o.FnParam('ctx')],
+    [...createCond, ...updateCond],
+    /* type */ undefined,
+    /* sourceSpan */ undefined,
+    view.fnName,
+  );
 }
 
 function maybeGenerateRfBlock(flag: number, statements: o.Statement[]): o.Statement[] {
@@ -231,12 +247,13 @@ function maybeGenerateRfBlock(flag: number, statements: o.Statement[]): o.Statem
 
   return [
     o.ifStmt(
-        new o.BinaryOperatorExpr(o.BinaryOperator.BitwiseAnd, o.variable('rf'), o.literal(flag)),
-        statements),
+      new o.BinaryOperatorExpr(o.BinaryOperator.BitwiseAnd, o.variable('rf'), o.literal(flag)),
+      statements,
+    ),
   ];
 }
 
-export function emitHostBindingFunction(job: HostBindingCompilationJob): o.FunctionExpr|null {
+export function emitHostBindingFunction(job: HostBindingCompilationJob): o.FunctionExpr | null {
   if (job.root.fnName === null) {
     throw new Error(`AssertionError: host binding function is unnamed`);
   }
@@ -244,16 +261,22 @@ export function emitHostBindingFunction(job: HostBindingCompilationJob): o.Funct
   const createStatements: o.Statement[] = [];
   for (const op of job.root.create) {
     if (op.kind !== ir.OpKind.Statement) {
-      throw new Error(`AssertionError: expected all create ops to have been compiled, but got ${
-          ir.OpKind[op.kind]}`);
+      throw new Error(
+        `AssertionError: expected all create ops to have been compiled, but got ${
+          ir.OpKind[op.kind]
+        }`,
+      );
     }
     createStatements.push(op.statement);
   }
   const updateStatements: o.Statement[] = [];
   for (const op of job.root.update) {
     if (op.kind !== ir.OpKind.Statement) {
-      throw new Error(`AssertionError: expected all update ops to have been compiled, but got ${
-          ir.OpKind[op.kind]}`);
+      throw new Error(
+        `AssertionError: expected all update ops to have been compiled, but got ${
+          ir.OpKind[op.kind]
+        }`,
+      );
     }
     updateStatements.push(op.statement);
   }
@@ -265,13 +288,10 @@ export function emitHostBindingFunction(job: HostBindingCompilationJob): o.Funct
   const createCond = maybeGenerateRfBlock(1, createStatements);
   const updateCond = maybeGenerateRfBlock(2, updateStatements);
   return o.fn(
-      [
-        new o.FnParam('rf'),
-        new o.FnParam('ctx'),
-      ],
-      [
-        ...createCond,
-        ...updateCond,
-      ],
-      /* type */ undefined, /* sourceSpan */ undefined, job.root.fnName);
+    [new o.FnParam('rf'), new o.FnParam('ctx')],
+    [...createCond, ...updateCond],
+    /* type */ undefined,
+    /* sourceSpan */ undefined,
+    job.root.fnName,
+  );
 }

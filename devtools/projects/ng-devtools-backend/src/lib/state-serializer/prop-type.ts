@@ -8,6 +8,8 @@
 
 import {PropType} from 'protocol';
 
+import {isSignal} from '../utils';
+
 const commonTypes = {
   boolean: PropType.Boolean,
   bigint: PropType.BigInt,
@@ -24,6 +26,10 @@ const commonTypes = {
  * @see `devtools/projects/protocol`
  */
 export const getPropType = (prop: unknown): PropType => {
+  if (isSignal(prop)) {
+    prop = prop();
+  }
+
   if (prop === undefined) {
     return PropType.Undefined;
   }
@@ -34,8 +40,8 @@ export const getPropType = (prop: unknown): PropType => {
     return PropType.HTMLNode;
   }
   const type = typeof prop;
-  if (commonTypes[type] !== undefined) {
-    return commonTypes[type];
+  if (type in commonTypes) {
+    return commonTypes[type as keyof typeof commonTypes];
   }
   if (type === 'object') {
     if (Array.isArray(prop)) {

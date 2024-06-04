@@ -31,20 +31,18 @@ import {
   NavigationList,
 } from '@angular/docs';
 import {ActivatedRoute, RouterLink} from '@angular/router';
-import {filter} from 'rxjs';
-
-import {
-  TutorialNavigationData,
-  TutorialNavigationItem,
-} from '../../../../../../scripts/tutorials/tutorials-types';
-import {TutorialType} from '../../../../../../scripts/tutorials/utils/web-constants';
+import {filter} from 'rxjs/operators';
 import {PagePrefix} from '../../core/enums/pages';
 import {injectAsync} from '../../core/services/inject-async';
-import {EmbeddedTutorialManager} from '../../embedded-editor/embedded-tutorial-manager.service';
-import {LoadingStep} from '../../embedded-editor/enums/loading-steps';
-import {NodeRuntimeState} from './../../embedded-editor/node-runtime-state.service';
-import {EmbeddedEditor} from './../../embedded-editor/embedded-editor.component';
+import {
+  EmbeddedTutorialManager,
+  LoadingStep,
+  NodeRuntimeState,
+  EmbeddedEditor,
+} from '../../editor/index';
 import {SplitResizerHandler} from './split-resizer-handler.service';
+import {TutorialType} from '@angular/docs';
+import {TutorialNavigationData, TutorialNavigationItem} from '@angular/docs';
 
 const INTRODUCTION_LABEL = 'Introduction';
 
@@ -140,9 +138,7 @@ export default class Tutorial implements AfterViewInit {
     this.embeddedTutorialManager.revealAnswer();
 
     const nodeRuntimeSandbox = await injectAsync(this.environmentInjector, () =>
-      import('./../../embedded-editor/node-runtime-sandbox.service').then(
-        (s) => s.NodeRuntimeSandbox,
-      ),
+      import('../../editor/index').then((s) => s.NodeRuntimeSandbox),
     );
 
     await Promise.all(
@@ -160,9 +156,7 @@ export default class Tutorial implements AfterViewInit {
     this.embeddedTutorialManager.resetRevealAnswer();
 
     const nodeRuntimeSandbox = await injectAsync(this.environmentInjector, () =>
-      import('./../../embedded-editor/node-runtime-sandbox.service').then(
-        (s) => s.NodeRuntimeSandbox,
-      ),
+      import('../../editor/index').then((s) => s.NodeRuntimeSandbox),
     );
 
     await Promise.all(
@@ -217,16 +211,10 @@ export default class Tutorial implements AfterViewInit {
 
     this.shouldRenderContent.set(routeData.type !== TutorialType.EDITOR_ONLY);
 
-    this.nextStepPath = routeData.nextStep
-      ? `/${PagePrefix.TUTORIALS}/${routeData.nextStep}`
-      : undefined;
-    this.previousStepPath = routeData.previousStep
-      ? `/${PagePrefix.TUTORIALS}/${routeData.previousStep}`
-      : undefined;
+    this.nextStepPath = routeData.nextStep ? `/${routeData.nextStep}` : undefined;
+    this.previousStepPath = routeData.previousStep ? `/${routeData.previousStep}` : undefined;
 
-    this.nextTutorialPath.set(
-      routeData.nextTutorial ? `/${PagePrefix.TUTORIALS}/${routeData.nextTutorial}` : null,
-    );
+    this.nextTutorialPath.set(routeData.nextTutorial ? `/${routeData.nextTutorial}` : null);
   }
 
   /**
@@ -257,9 +245,7 @@ export default class Tutorial implements AfterViewInit {
 
   private async loadEmbeddedEditor() {
     const nodeRuntimeSandbox = await injectAsync(this.environmentInjector, () =>
-      import('./../../embedded-editor/node-runtime-sandbox.service').then(
-        (s) => s.NodeRuntimeSandbox,
-      ),
+      import('../../editor/index').then((s) => s.NodeRuntimeSandbox),
     );
 
     this.canRevealAnswer = computed(() => this.nodeRuntimeState.loadingStep() > LoadingStep.BOOT);
@@ -268,8 +254,6 @@ export default class Tutorial implements AfterViewInit {
   }
 
   private async loadEmbeddedEditorComponent(): Promise<typeof EmbeddedEditor> {
-    return await import('./../../embedded-editor/embedded-editor.component').then(
-      (c) => c.EmbeddedEditor,
-    );
+    return await import('../../editor/index').then((c) => c.EmbeddedEditor);
   }
 }

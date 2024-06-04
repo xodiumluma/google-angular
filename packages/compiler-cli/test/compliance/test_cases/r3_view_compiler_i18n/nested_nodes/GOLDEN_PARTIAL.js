@@ -154,7 +154,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Component,
             args: [{
                     selector: 'my-component',
-                    template: '<div i18n>`{{ count }}`</div>',
+                    template: '<div i18n>`{{ count }}`</div>'
                 }]
         }] });
 export class MyModule {
@@ -207,7 +207,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
   <div i18n>My i18n block #2</div>
   <div>My non-i18n block #2</div>
   <div i18n>My i18n block #3</div>
-  `,
+  `
                 }]
         }] });
 export class MyModule {
@@ -261,7 +261,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     Named interpolation: {{ valueA // i18n(ph="PH_A") }}
     Named interpolation with spaces: {{ valueB // i18n(ph="PH B") }}
   </div>
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -311,7 +311,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     template: `
   <div i18n>{% valueA %}</div>
   `,
-                    interpolation: ['{%', '%}'],
+                    interpolation: ['{%', '%}']
                 }]
         }] });
 export class MyModule {
@@ -537,7 +537,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
       </div>
     </div>
   </div>
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -620,7 +620,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     Plain text in nested element (block #2)
   </span>
 </div>
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -694,7 +694,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
       </div>
     </div>
   </div>
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -742,7 +742,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
   <img src="logo.png" i18n />
   <img src="logo.png" i18n *ngIf="visible" />
   <img src="logo.png" i18n *ngIf="visible" i18n-title title="App logo #{{ id }}" />
-  `,
+  `
                 }]
         }] });
 export class MyModule {
@@ -826,7 +826,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
       </div>
     </div>
   </div>
-`,
+`
                 }]
         }] });
 export class MyModule {
@@ -934,6 +934,128 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
 import * as i0 from "@angular/core";
 export declare class MyComponent {
     onClick(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyComponent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyComponent, "my-component", never, {}, {}, never, never, false, never>;
+}
+export declare class MyModule {
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyModule, never>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<MyModule, [typeof MyComponent], never, never>;
+    static ɵinj: i0.ɵɵInjectorDeclaration<MyModule>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: nested_ng-content.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyComponent {
+}
+MyComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, isStandalone: true, selector: "my-component", ngImport: i0, template: `
+  <div i18n>
+    <ng-content select="special"></ng-content>
+    <ng-content></ng-content>
+  </div>
+`, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'my-component',
+                    standalone: true,
+                    template: `
+  <div i18n>
+    <ng-content select="special"></ng-content>
+    <ng-content></ng-content>
+  </div>
+`
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: nested_ng-content.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyComponent {
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyComponent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyComponent, "my-component", never, {}, {}, never, ["special", "*"], true, never>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: i18n_after_binding.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyComponent {
+}
+MyComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, isStandalone: true, selector: "my-cmp", ngImport: i0, template: `
+		<span i18n>
+  			<input [disabled]="someBoolean">
+			{{ someField }}
+		</span>
+	`, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'my-cmp',
+                    standalone: true,
+                    template: `
+		<span i18n>
+  			<input [disabled]="someBoolean">
+			{{ someField }}
+		</span>
+	`
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: i18n_after_binding.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyComponent {
+    someBoolean: boolean;
+    someField: any;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyComponent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyComponent, "my-cmp", never, {}, {}, never, never, true, never>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: last_elem_inside_i18n_block.js
+ ****************************************************************************************************/
+import { Component, NgModule } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyComponent {
+}
+MyComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", type: MyComponent, selector: "my-component", ngImport: i0, template: `
+  <div i18n>{{ text }}<h1 i18n-title title="{{ attr }}"></h1></div>
+  `, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyComponent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'my-component',
+                    template: `
+  <div i18n>{{ text }}<h1 i18n-title title="{{ attr }}"></h1></div>
+  `
+                }]
+        }] });
+export class MyModule {
+}
+MyModule.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+MyModule.ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyModule, declarations: [MyComponent] });
+MyModule.ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyModule });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyModule, decorators: [{
+            type: NgModule,
+            args: [{ declarations: [MyComponent] }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: last_elem_inside_i18n_block.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyComponent {
+    attr: any;
+    text: any;
     static ɵfac: i0.ɵɵFactoryDeclaration<MyComponent, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<MyComponent, "my-component", never, {}, {}, never, never, false, never>;
 }

@@ -8,13 +8,14 @@
 
 import {CommonModule} from '@angular/common';
 import {DocContent, DocViewer} from '@angular/docs';
-import {Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from '@angular/router';
-import {map} from 'rxjs';
+import {map} from 'rxjs/operators';
 
 @Component({
-  selector: 'adev-docs',
+  selector: 'docs-docs',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [CommonModule, DocViewer],
   styleUrls: ['./docs.component.scss'],

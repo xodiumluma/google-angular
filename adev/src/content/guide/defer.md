@@ -56,7 +56,9 @@ Note: Certain triggers may require the presence of either a `@placeholder` or a 
 
 ### `@loading`
 
-The `@loading` block is an optional block that allows you to declare content that will be shown during the loading of any deferred dependencies. For example, you could show a loading spinner. Similar to `@placeholder`, the dependencies of the `@loading` block are eagerly loaded.
+The `@loading` block is an optional block that allows you to declare content that will be shown during the loading of any deferred dependencies. Its dependences are eagerly loaded (similar to `@placeholder`).
+
+For example, you could show a loading spinner. Once loading has been triggered, the `@loading` block replaces the `@placeholder` block. 
 
 The `@loading` block accepts two optional parameters to specify the `minimum` amount of time that this placeholder should be shown and amount of time to wait `after` loading begins before showing the loading template. `minimum` and `after` parameters are specified in time increments of milliseconds (ms) or seconds (s). Just like `@placeholder`, these parameters exist to prevent fast flickering of content in the case that the deferred dependencies are fetched quickly. Both the `minimum` and `after` timers for the `@loading` block begins immediately after the loading has been triggered.
 
@@ -240,10 +242,13 @@ In the example below, the prefetching starts when a browser becomes idle and the
 
 ## Testing
 
-Angular provides TestBed APIs to simplify the process of testing `@defer` blocks and triggering different states during testing. By default, `@defer` blocks in tests are in "paused" (`@placeholder`) state, so that you can manually transition between states.
+Angular provides TestBed APIs to simplify the process of testing `@defer` blocks and triggering different states during testing. By default, `@defer` blocks in tests will play through like a defer block would behave in a real application. If you want to manually step through states, you can switch the defer block behavior to `Manual` in the TestBed configuration.
 
 ```typescript
 it('should render a defer block in different states', async () => {
+  // configures the defer block behavior to start in "paused" state for manual control.
+  TestBed.configureTestingModule({deferBlockBehavior: DeferBlockBehavior.Manual});
+
   @Component({
     // ...
     template: `

@@ -4,11 +4,11 @@ In previous activities you used the `inject()` function to make resources availa
 
 You specify the resources as parameters to the `constructor` function of a component. Angular will make those resources available to your component.
 <br><br>
-In this activity you will learn to use constructor-based dependency injection.
+In this activity, you will learn how to use constructor-based dependency injection.
 
 <hr>
 
-To inject a service or some other injectable resource into your componenet use the following syntax:
+To inject a service or some other injectable resource into your component use the following syntax:
 
 <docs-code language="ts" highlight="[3]">
 @Component({...})

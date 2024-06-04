@@ -11,18 +11,17 @@ import {ComponentRef, EnvironmentInjector, Injectable} from '@angular/core';
 import {RouterOutletContract} from './directives/router_outlet';
 import {ActivatedRoute} from './router_state';
 
-
 /**
  * Store contextual information about a `RouterOutlet`
  *
  * @publicApi
  */
 export class OutletContext {
-  outlet: RouterOutletContract|null = null;
-  route: ActivatedRoute|null = null;
-  injector: EnvironmentInjector|null = null;
-  children = new ChildrenOutletContexts();
-  attachRef: ComponentRef<any>|null = null;
+  outlet: RouterOutletContract | null = null;
+  route: ActivatedRoute | null = null;
+  children = new ChildrenOutletContexts(this.injector);
+  attachRef: ComponentRef<any> | null = null;
+  constructor(public injector: EnvironmentInjector) {}
 }
 
 /**
@@ -34,6 +33,9 @@ export class OutletContext {
 export class ChildrenOutletContexts {
   // contexts for child outlets, by name.
   private contexts = new Map<string, OutletContext>();
+
+  /** @nodoc */
+  constructor(private parentInjector: EnvironmentInjector) {}
 
   /** Called when a `RouterOutlet` directive is instantiated */
   onChildOutletCreated(childName: string, outlet: RouterOutletContract): void {
@@ -73,14 +75,14 @@ export class ChildrenOutletContexts {
     let context = this.getContext(childName);
 
     if (!context) {
-      context = new OutletContext();
+      context = new OutletContext(this.parentInjector);
       this.contexts.set(childName, context);
     }
 
     return context;
   }
 
-  getContext(childName: string): OutletContext|null {
+  getContext(childName: string): OutletContext | null {
     return this.contexts.get(childName) || null;
   }
 }

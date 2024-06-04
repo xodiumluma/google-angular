@@ -6,11 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {
-  contentResolver,
-  flatNavigationData,
-  mapNavigationItemsToRoutes,
-} from '@angular/docs';
+import {contentResolver, flatNavigationData, mapNavigationItemsToRoutes} from '@angular/docs';
 import {Route} from '@angular/router';
 
 import {DefaultPage, PagePrefix} from './core/enums/pages';
@@ -45,6 +41,12 @@ const referencePageRoutes = mapNavigationItemsToRoutes(
   },
 );
 
+const updateGuidePageRoute: Route = {
+  path: referenceNavigationItems.find((r) => r.path === DefaultPage.UPDATE)!.path,
+  loadComponent: () => import('./features/update/update.component'),
+  data: commonReferenceRouteData,
+};
+
 const cliReferencePageRoutes = mapNavigationItemsToRoutes(
   referenceNavigationItems.filter((r) => r.path?.startsWith(`${PagePrefix.CLI}/`)),
   {
@@ -65,6 +67,7 @@ const docsReferencePageRoutes = mapNavigationItemsToRoutes(
   referenceNavigationItems.filter(
     (r) =>
       r.path !== DefaultPage.REFERENCE &&
+      r.path !== DefaultPage.UPDATE &&
       !r.path?.startsWith(`${PagePrefix.API}/`) &&
       !r.path?.startsWith(`${PagePrefix.CLI}/`),
   ),
@@ -125,6 +128,7 @@ export const routes: Route[] = [
       {
         path: '',
         loadComponent: () => import('./features/home/home.component'),
+        data: {label: 'Home'},
       },
       {
         path: PagePrefix.DOCS,
@@ -141,11 +145,12 @@ export const routes: Route[] = [
       {
         path: PagePrefix.PLAYGROUND,
         loadComponent: () => import('./features/playground/playground.component'),
-        data: {...commonTutorialRouteData},
+        data: {...commonTutorialRouteData, label: 'Playground'},
       },
       ...SUB_NAVIGATION_ROUTES,
       ...API_REFERENCE_ROUTES,
       ...FOOTER_ROUTES,
+      updateGuidePageRoute,
     ],
   },
   // Error page

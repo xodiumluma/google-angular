@@ -47,7 +47,7 @@ To verify that the application is server-side rendered, run it locally with `ng 
 
 The `server.ts` file configures a Node.js Express server and Angular server-side rendering. `CommonEngine` is used to render an Angular application.
 
-<docs-code path="ssr/server.ts" visibleLines="[31,45]"></docs-code>
+<docs-code path="adev/src/content/examples/ssr/server.ts" visibleLines="[31,45]"></docs-code>
 
 The `render` method of `CommonEngine` accepts an object with the following properties:
 
@@ -71,7 +71,7 @@ Hydration is the process that restores the server side rendered application on t
 
 [`HttpClient`](api/common/http/HttpClient) cached outgoing network requests when running on the server. This information is serialized and transferred to the browser as part of the initial HTML sent from the server. In the browser, `HttpClient` checks whether it has data in the cache and if so, reuses it instead of making a new HTTP request during initial application rendering. `HttpClient` stops using the cache once an application becomes [stable](api/core/ApplicationRef#isStable) while running in a browser.
 
-`HttpClient` caches all `HEAD` and `GET` requests by default. You can configure the cache by using [`withHttpTransferCacheOptions`](/api/platform-browser/withHttpTransferCacheOptions) when providing hydration.
+By default, `HttpClient` caches all `HEAD` and `GET` requests which don't contain `Authorization` or `Proxy-Authorization` headers. You can override those settings by using [`withHttpTransferCacheOptions`](api/platform-browser/withHttpTransferCacheOptions) when providing hydration.
 
 <docs-code language="typescript">
 

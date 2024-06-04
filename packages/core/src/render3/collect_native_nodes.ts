@@ -15,18 +15,21 @@ import {isLContainer} from './interfaces/type_checks';
 import {DECLARATION_COMPONENT_VIEW, HOST, LView, TVIEW, TView} from './interfaces/view';
 import {assertTNodeType} from './node_assert';
 import {getProjectionNodes} from './node_manipulation';
-import {getLViewParent} from './util/view_traversal_utils';
-import {unwrapRNode} from './util/view_utils';
-
+import {getLViewParent, unwrapRNode} from './util/view_utils';
 
 export function collectNativeNodes(
-    tView: TView, lView: LView, tNode: TNode|null, result: any[],
-    isProjection: boolean = false): any[] {
+  tView: TView,
+  lView: LView,
+  tNode: TNode | null,
+  result: any[],
+  isProjection: boolean = false,
+): any[] {
   while (tNode !== null) {
     ngDevMode &&
-        assertTNodeType(
-            tNode,
-            TNodeType.AnyRNode | TNodeType.AnyContainer | TNodeType.Projection | TNodeType.Icu);
+      assertTNodeType(
+        tNode,
+        TNodeType.AnyRNode | TNodeType.AnyContainer | TNodeType.Projection | TNodeType.Icu,
+      );
 
     const lNode = lView[tNode.index];
     if (lNode !== null) {
@@ -45,8 +48,8 @@ export function collectNativeNodes(
       collectNativeNodes(tView, lView, tNode.child, result);
     } else if (tNodeType & TNodeType.Icu) {
       const nextRNode = icuContainerIterate(tNode as TIcuContainerNode, lView);
-      let rNode: RNode|null;
-      while (rNode = nextRNode()) {
+      let rNode: RNode | null;
+      while ((rNode = nextRNode())) {
         result.push(rNode);
       }
     } else if (tNodeType & TNodeType.Projection) {

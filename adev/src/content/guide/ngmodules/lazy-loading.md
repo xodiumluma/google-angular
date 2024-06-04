@@ -1,7 +1,7 @@
 # Lazy-loading feature modules
 
 By default, NgModules are eagerly loaded. This means that as soon as the application loads, so do all the NgModules, whether they are immediately necessary or not.
-For large applications with lots of routes, consider lazy loading &mdash;a design pattern that loads NgModules as needed.
+For large applications with lots of routes, consider lazy loading —a design pattern that loads NgModules as needed.
 Lazy loading helps keep initial bundle sizes smaller, which in turn helps decrease load times.
 
 <!-- For the final sample application with two lazy-loaded modules that this page describes: -->
@@ -156,7 +156,7 @@ ng serve
 
 Then go to `localhost:4200` where you should see "customer-app" and three buttons.
 
-<img alt="three buttons in the browser" src="assets/content/images/guide/modules/lazy-loading-three-buttons.png" width="300">
+<img alt="three buttons in the browser" src="assets/images/guide/modules/lazy-loading-three-buttons.png" width="300">
 
 These buttons work, because the Angular CLI automatically added the routes for the feature modules to the `routes` array in `app-routing.module.ts`.
 
@@ -259,17 +259,17 @@ const routes: Routes = [
 You can verify that a module is indeed being lazy loaded with the Chrome developer tools.
 In Chrome, open the developer tools by pressing <kbd>⌘ Cmd</kbd>+<kbd>Option</kbd>+<kbd>i</kbd> on a Mac or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>j</kbd> on a PC and go to the Network Tab.
 
-<img alt="lazy loaded modules diagram" src="assets/content/images/guide/modules/lazy-loading-network-tab.png" width="600">
+<img alt="lazy loaded modules diagram" src="assets/images/guide/modules/lazy-loading-network-tab.png" width="600">
 
 Click on the Orders or Customers button.
 If you see a chunk appear, everything is wired up properly and the feature module is being lazy loaded.
 A chunk should appear for Orders and for Customers but only appears once for each.
 
-<img alt="lazy loaded modules diagram" src="assets/content/images/guide/modules/lazy-loading-chunk-arrow.png" width="600">
+<img alt="lazy loaded modules diagram" src="assets/images/guide/modules/lazy-loading-chunk-arrow.png" width="600">
 
 To see it again, or to test after making changes, click the circle with a line through it in the upper left of the Network Tab:
 
-<img alt="lazy loaded modules diagram" src="assets/content/images/guide/modules/lazy-loading-clear.gif" width="200">
+<img alt="lazy loaded modules diagram" src="assets/images/guide/modules/lazy-loading-clear.gif" width="200">
 
 Then reload with <kbd>⌘ Cmd</kbd>+<kbd>R</kbd> or <kbd>Ctrl</kbd>+<kbd>R</kbd>, depending on your platform.
 
@@ -363,7 +363,7 @@ In the newly created service, implement the `Resolve` interface provided by the 
 
 import { Resolve } from '@angular/router';
 
-&hellip;
+…
 
 /*An interface that represents your data model*/
 export interface Crisis {
@@ -371,8 +371,8 @@ export interface Crisis {
   name: string;
 }
 
-export class CrisisDetailResolverService implements Resolve&lt;Crisis&gt; {
-  resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable&lt;Crisis&gt; {
+export class CrisisDetailResolverService implements Resolve<Crisis> {
+  resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<Crisis> {
     // your logic goes here
   }
 }
@@ -405,7 +405,7 @@ In the component's constructor, inject an instance of the `ActivatedRoute` class
 <docs-code header="Component's constructor (excerpt)">
 import { ActivatedRoute } from '@angular/router';
 
-@Component({ &hellip; })
+@Component({ … })
 class YourComponent {
   constructor(private route: ActivatedRoute) {}
 }
@@ -417,7 +417,7 @@ Use the injected instance of the `ActivatedRoute` class to access `data` associa
            highlight="[1,5,8]">
 import { ActivatedRoute } from '@angular/router';
 
-@Component({ &hellip; })
+@Component({ … })
 class YourComponent {
   constructor(private route: ActivatedRoute) {}
 
@@ -425,7 +425,7 @@ class YourComponent {
     this.route.data
       .subscribe(data => {
         const crisis: Crisis = data.crisis;
-        // &hellip;
+        // …
       });
   }
 }
@@ -440,7 +440,7 @@ If `ng generate module` with the `--route` parameter returns an error, but runs 
 
 Remember, many common Angular modules should be imported at the base of your application.
 
-For more information on Angular Modules, see [NgModules](/guide/ngmodules).
+For more information on Angular Modules, see [NgModules](guide/ngmodules).
 
 ## More on NgModules and routing
 

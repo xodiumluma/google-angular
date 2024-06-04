@@ -7,42 +7,100 @@
  */
 
 import {AsyncPipe} from '@angular/common';
-import {AfterViewInit, Component, computed, ContentChildren, createComponent, createEnvironmentInjector, destroyPlatform, effect, EnvironmentInjector, ErrorHandler, inject, Injectable, Injector, Input, NgZone, OnChanges, QueryList, signal, SimpleChanges, ViewChild, ViewContainerRef} from '@angular/core';
+import {
+  AfterViewInit,
+  ApplicationRef,
+  Component,
+  computed,
+  ContentChildren,
+  createComponent,
+  createEnvironmentInjector,
+  destroyPlatform,
+  effect,
+  EnvironmentInjector,
+  ErrorHandler,
+  inject,
+  Injectable,
+  Injector,
+  Input,
+  NgZone,
+  OnChanges,
+  QueryList,
+  signal,
+  SimpleChanges,
+  ViewChild,
+  ViewContainerRef,
+} from '@angular/core';
 import {toObservable} from '@angular/core/rxjs-interop';
 import {TestBed} from '@angular/core/testing';
 import {bootstrapApplication} from '@angular/platform-browser';
 import {withBody} from '@angular/private/testing';
+import {filter, firstValueFrom, map} from 'rxjs';
 
 describe('effects', () => {
   beforeEach(destroyPlatform);
   afterEach(destroyPlatform);
 
-  it('should run effects in the zone in which they get created',
-     withBody('<test-cmp></test-cmp>', async () => {
-       const log: string[] = [];
-       @Component({
-         selector: 'test-cmp',
-         standalone: true,
-         template: '',
-       })
-       class Cmp {
-         constructor(ngZone: NgZone) {
-           effect(() => {
-             log.push(Zone.current.name);
-           });
+  it(
+    'should run effects in the zone in which they get created',
+    withBody('<test-cmp></test-cmp>', async () => {
+      const log: string[] = [];
+      @Component({
+        selector: 'test-cmp',
+        standalone: true,
+        template: '',
+      })
+      class Cmp {
+        constructor(ngZone: NgZone) {
+          effect(() => {
+            log.push(Zone.current.name);
+          });
 
-           ngZone.runOutsideAngular(() => {
-             effect(() => {
-               log.push(Zone.current.name);
-             });
-           });
-         }
-       }
+          ngZone.runOutsideAngular(() => {
+            effect(() => {
+              log.push(Zone.current.name);
+            });
+          });
+        }
+      }
 
-       await bootstrapApplication(Cmp);
+      await bootstrapApplication(Cmp);
 
-       expect(log).not.toEqual(['angular', 'angular']);
-     }));
+      expect(log).not.toEqual(['angular', 'angular']);
+    }),
+  );
+
+  it('should contribute to application stableness when an effect is pending', async () => {
+    const someSignal = signal('initial');
+
+    @Component({
+      standalone: true,
+      template: '',
+    })
+    class App {
+      unused = effect(() => someSignal());
+    }
+
+    const appRef = TestBed.inject(ApplicationRef);
+    const componentRef = createComponent(App, {
+      environmentInjector: TestBed.inject(EnvironmentInjector),
+    });
+    // Effect is not scheduled until change detection runs for the component
+    await expectAsync(firstValueFrom(appRef.isStable)).toBeResolvedTo(true);
+
+    componentRef.changeDetectorRef.detectChanges();
+    const stableEmits: boolean[] = [];
+    const p = firstValueFrom(
+      appRef.isStable.pipe(
+        map((stable) => {
+          stableEmits.push(stable);
+          return stableEmits;
+        }),
+        filter((emits) => emits.length === 2),
+      ),
+    );
+    await expectAsync(p).toBeResolvedTo([false, true]);
+  });
 
   it('should propagate errors to the ErrorHandler', () => {
     let run = false;
@@ -55,15 +113,59 @@ describe('effects', () => {
     }
 
     const injector = createEnvironmentInjector(
-        [{provide: ErrorHandler, useFactory: () => new FakeErrorHandler()}],
-        TestBed.inject(EnvironmentInjector));
-    effect(() => {
-      run = true;
-      throw new Error('fail!');
-    }, {injector});
+      [{provide: ErrorHandler, useFactory: () => new FakeErrorHandler()}],
+      TestBed.inject(EnvironmentInjector),
+    );
+    effect(
+      () => {
+        run = true;
+        throw new Error('fail!');
+      },
+      {injector},
+    );
     expect(() => TestBed.flushEffects()).not.toThrow();
     expect(run).toBeTrue();
     expect(lastError.message).toBe('fail!');
+  });
+
+  it('should be usable inside an ErrorHandler', async () => {
+    const shouldError = signal(false);
+    let lastError: any = null;
+
+    class FakeErrorHandler extends ErrorHandler {
+      constructor() {
+        super();
+        effect(() => {
+          if (shouldError()) {
+            throw new Error('fail!');
+          }
+        });
+      }
+
+      override handleError(error: any): void {
+        lastError = error;
+      }
+    }
+
+    @Component({
+      standalone: true,
+      template: '',
+      providers: [{provide: ErrorHandler, useClass: FakeErrorHandler}],
+    })
+    class App {
+      errorHandler = inject(ErrorHandler);
+    }
+
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.errorHandler).toBeInstanceOf(FakeErrorHandler);
+    expect(lastError).toBe(null);
+
+    shouldError.set(true);
+    fixture.detectChanges();
+
+    expect(lastError?.message).toBe('fail!');
   });
 
   it('should run effect cleanup function on destroy', async () => {
@@ -115,9 +217,12 @@ describe('effects', () => {
       injector = inject(Injector);
 
       ngAfterViewInit(): void {
-        effect(() => {
-          didRun = true;
-        }, {injector: this.injector});
+        effect(
+          () => {
+            didRun = true;
+          },
+          {injector: this.injector},
+        );
       }
     }
 
@@ -127,24 +232,26 @@ describe('effects', () => {
     expect(didRun).toBeTrue();
   });
 
-  it('should disallow writing to signals within effects by default',
-     withBody('<test-cmp></test-cmp>', async () => {
-       @Component({
-         selector: 'test-cmp',
-         standalone: true,
-         template: '',
-       })
-       class Cmp {
-         counter = signal(0);
-         constructor() {
-           effect(() => {
-             expect(() => this.counter.set(1)).toThrow();
-           });
-         }
-       }
+  it(
+    'should disallow writing to signals within effects by default',
+    withBody('<test-cmp></test-cmp>', async () => {
+      @Component({
+        selector: 'test-cmp',
+        standalone: true,
+        template: '',
+      })
+      class Cmp {
+        counter = signal(0);
+        constructor() {
+          effect(() => {
+            expect(() => this.counter.set(1)).toThrow();
+          });
+        }
+      }
 
-       await bootstrapApplication(Cmp);
-     }));
+      await bootstrapApplication(Cmp);
+    }),
+  );
 
   it('should allow writing to signals within effects when option set', () => {
     const counter = signal(0);
@@ -161,8 +268,8 @@ describe('effects', () => {
       template: '{{inSignal()}}',
     })
     class WithInput implements OnChanges {
-      inSignal = signal<string|undefined>(undefined);
-      @Input() in : string|undefined;
+      inSignal = signal<string | undefined>(undefined);
+      @Input() in: string | undefined;
 
       ngOnChanges(changes: SimpleChanges): void {
         if (changes['in']) {
@@ -177,8 +284,7 @@ describe('effects', () => {
       imports: [WithInput],
       template: `<with-input [in]="'A'" />|<with-input [in]="'B'" />`,
     })
-    class Cmp {
-    }
+    class Cmp {}
 
     const fixture = TestBed.createComponent(Cmp);
     fixture.detectChanges();
@@ -205,8 +311,7 @@ describe('effects', () => {
       imports: [WithConstructor],
       template: `<with-constructor />`,
     })
-    class Cmp {
-    }
+    class Cmp {}
 
     const fixture = TestBed.createComponent(Cmp);
     fixture.detectChanges();
@@ -236,8 +341,7 @@ describe('effects', () => {
           <with-input-setter [testInput]="'binding'" />|<with-input-setter testInput="static" />
       `,
     })
-    class Cmp {
-    }
+    class Cmp {}
 
     const fixture = TestBed.createComponent(Cmp);
     fixture.detectChanges();
@@ -265,8 +369,7 @@ describe('effects', () => {
       imports: [WithQuery],
       template: `<with-query><div #item></div></with-query>`,
     })
-    class Cmp {
-    }
+    class Cmp {}
 
     const fixture = TestBed.createComponent(Cmp);
     fixture.detectChanges();
@@ -280,7 +383,6 @@ describe('effects', () => {
       selector: 'with-query-setter',
       standalone: true,
       template: '<div #el></div>',
-
     })
     class WithQuerySetter {
       el: unknown;
@@ -523,8 +625,9 @@ describe('effects', () => {
       }
 
       const fixture = TestBed.createComponent(Cmp);
-      expect(() => fixture.detectChanges(true))
-          .toThrowError(/effect\(\) cannot be called from within a reactive context./);
+      expect(() => fixture.detectChanges(true)).toThrowError(
+        /effect\(\) cannot be called from within a reactive context./,
+      );
     });
 
     it('inside computed', () => {
@@ -554,18 +657,20 @@ describe('effects', () => {
       TestBed.configureTestingModule({
         providers: [
           {
-            provide: ErrorHandler, useClass: class extends ErrorHandler{
+            provide: ErrorHandler,
+            useClass: class extends ErrorHandler {
               override handleError(e: Error) {
                 throw e;
               }
             },
           },
-        ]
+        ],
       });
       const fixture = TestBed.createComponent(Cmp);
 
-      expect(() => fixture.detectChanges())
-          .toThrowError(/effect\(\) cannot be called from within a reactive context./);
+      expect(() => fixture.detectChanges()).toThrowError(
+        /effect\(\) cannot be called from within a reactive context./,
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
 # Providing dependencies in modules
 
-A provider is an instruction to the [Dependency Injection](/guide/di) system on how to obtain a value for a dependency.
+A provider is an instruction to the [Dependency Injection](guide/di) system on how to obtain a value for a dependency.
 Most of the time, these dependencies are services that you create and provide.
 
 ## Providing a service
@@ -39,38 +39,6 @@ Additionally, these providers are also available to all the classes in the appli
 
 You should always provide your service in the root injector unless there is a case where you want the service to be available only if the consumer imports a particular `@NgModule`.
 
-## `providedIn` and NgModules
-
-It's also possible to specify that a service should be provided in a particular `@NgModule`.
-For example, if you don't want `UserService` to be available to applications unless they import a `UserModule` you've created, you can specify that the service should be provided in the module:
-
-<docs-code header="src/app/user.service.ts" highlight="[5]">
-import { Injectable } from '@angular/core';
-import { UserModule } from './user.module';
-
-@Injectable({
-  providedIn: UserModule,
-})
-export class UserService {
-}
-</docs-code>
-
-The example above shows the **preferred** way to provide a service in a module.
-This method is preferred because it enables tree-shaking of the service if nothing injects it.
-
-If it's not possible to specify in the service which module should provide it, you can also declare a provider for the service within the module:
-
-<docs-code header="src/app/user.module.ts" highlight="[5]">
-import { NgModule } from '@angular/core';
-import { UserService } from './user.service';
-
-@NgModule({
-  providers: [UserService],
-})
-export class UserModule {
-}
-</docs-code>
-
 ## Limiting provider scope by lazy loading modules
 
 In the basic CLI-generated app, modules are eagerly loaded which means that they are all loaded when the application launches.
@@ -89,7 +57,7 @@ When the Angular router lazy-loads a module, it creates a new injector.
 This injector is a child of the root application injector.
 Imagine a tree of injectors; there is a single root injector and then a child injector for each lazy loaded module.
 This child injector gets populated with all the module-specific providers, if any.
-Look up resolution for every provider follows the [rules of dependency injection hierarchy](/guide/di/hierarchical-dependency-injection#resolution-rules).
+Look up resolution for every provider follows the [rules of dependency injection hierarchy](guide/di/hierarchical-dependency-injection#resolution-rules).
 
 Any component created within a lazy loaded module's context, such as by router navigation, gets its own local instance of child provided services, not the instance in the root application injector.
 Components in external modules continue to receive the instances created for the application root injector.
@@ -113,7 +81,7 @@ export class UserService {
 
 With `providedIn: 'any'`, all eagerly loaded modules share a singleton instance; however, lazy loaded modules each get their own unique instance, as shown in the following diagram.
 
-<img alt="any-provider-scope" class="left" src="assets/content/images/guide/providers/any-provider.svg">
+<img alt="any-provider-scope" class="left" src="assets/images/guide/providers/any-provider.svg">
 
 ## Limiting provider scope with components
 
@@ -146,7 +114,7 @@ Then each new instance of the `UserEditorComponent` gets its own cached service 
 
 Services are singletons within the scope of an injector, which means there is at most one instance of a service in a given injector.
 
-Angular DI has a [hierarchical injection system](/guide/di/hierarchical-dependency-injection), which means that nested injectors can create their own service instances.
+Angular DI has a [hierarchical injection system](guide/di/hierarchical-dependency-injection), which means that nested injectors can create their own service instances.
 Whenever Angular creates a new instance of a component that has `providers` specified in `@Component()`, it also creates a new child injector for that instance.
 Similarly, when a new NgModule is lazy-loaded at run time, Angular can create an injector for it with its own providers.
 

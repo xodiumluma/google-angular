@@ -1,4 +1,4 @@
-<docs-decorative-header title="Template syntax" imgSrc="assets/images/templates.svg"> <!-- markdownlint-disable-line -->
+<docs-decorative-header title="Template syntax" imgSrc="adev/src/assets/images/templates.svg"> <!-- markdownlint-disable-line -->
 In Angular, a *template* is a chunk of HTML.
 Use special syntax within a template to build on many of Angular's features.
 </docs-decorative-header>
@@ -18,7 +18,7 @@ The template syntax guides show you how to control the UX/UI by coordinating dat
 
 ## Empower your HTML
 
-Extend the HTML vocabulary of your applications With special Angular syntax in your templates.
+Extend the HTML vocabulary of your applications with special Angular syntax in your templates.
 For example, Angular helps you get and set DOM \(Document Object Model\) values dynamically with features such as built-in template functions, variables, event listening, and data binding.
 
 Almost all HTML syntax is valid template syntax.
@@ -26,7 +26,7 @@ However, because an Angular template is part of an overall webpage, and not the 
 
 IMPORTANT: To eliminate the risk of script injection attacks, Angular does not support the `<script>` element in templates.
 Angular ignores the `<script>` tag and outputs a warning to the browser console.
-For more information, see the [Security](guide/security) page.
+For more information, see the [Security](best-practices/security) page.
 
 ## More on template syntax
 

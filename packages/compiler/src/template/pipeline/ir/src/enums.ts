@@ -196,6 +196,16 @@ export enum OpKind {
   Repeater,
 
   /**
+   * An operation to bind an expression to the property side of a two-way binding.
+   */
+  TwoWayProperty,
+
+  /**
+   * An operation declaring the event side of a two-way binding.
+   */
+  TwoWayListener,
+
+  /**
    * The start of an i18n block.
    */
   I18nStart,
@@ -231,9 +241,19 @@ export enum OpKind {
   IcuEnd,
 
   /**
+   * An instruction representing a placeholder in an ICU expression.
+   */
+  IcuPlaceholder,
+
+  /**
    * An i18n context containing information needed to generate an i18n message.
    */
   I18nContext,
+
+  /**
+   * A creation op that corresponds to i18n attributes on an element.
+   */
+  I18nAttributes,
 }
 
 /**
@@ -341,11 +361,6 @@ export enum ExpressionKind {
   ReadTemporaryExpr,
 
   /**
-   * An expression representing a sanitizer function.
-   */
-  SanitizerExpr,
-
-  /**
    * An expression that will cause a literal slot index to be emitted.
    */
   SlotLiteralExpr,
@@ -356,15 +371,14 @@ export enum ExpressionKind {
   ConditionalCase,
 
   /**
-   * A variable for use inside a repeater, providing one of the ambiently-available context
-   * properties ($even, $first, etc.).
-   */
-  DerivedRepeaterVar,
-
-  /**
    * An expression that will be automatically extracted to the component const array.
    */
   ConstCollected,
+
+  /**
+   * Operation that sets the value of a two-way binding.
+   */
+  TwoWayBindingSet,
 }
 
 export enum VariableFlags {
@@ -413,27 +427,6 @@ export enum CompatibilityMode {
 }
 
 /**
- * Represents functions used to sanitize different pieces of a template.
- */
-export enum SanitizerFn {
-  Html,
-  Script,
-  Style,
-  Url,
-  ResourceUrl,
-  IframeAttribute,
-}
-
-/**
- * Enumeration of the different kinds of `@defer` secondary blocks.
- */
-export enum DeferSecondaryKind {
-  Loading,
-  Placeholder,
-  Error,
-}
-
-/**
  * Enumeration of the types of attributes which can be applied to an element.
  */
 export enum BindingKind {
@@ -471,6 +464,11 @@ export enum BindingKind {
    * Animation property bindings.
    */
   Animation,
+
+  /**
+   * Property side of a two-way binding.
+   */
+  TwoWayProperty,
 }
 
 /**
@@ -484,10 +482,25 @@ export enum I18nParamResolutionTime {
   Creation,
 
   /**
-   * Param is resolved during post-processing. This should be used for params who's value comes from
+   * Param is resolved during post-processing. This should be used for params whose value comes from
    * an ICU.
    */
-  Postproccessing
+  Postproccessing,
+}
+
+/**
+ * The contexts in which an i18n expression can be used.
+ */
+export enum I18nExpressionFor {
+  /**
+   * This expression is used as a value (i.e. inside an i18n block).
+   */
+  I18nText,
+
+  /**
+   * This expression is used in a binding.
+   */
+  I18nAttribute,
 }
 
 /**
@@ -498,7 +511,7 @@ export enum I18nParamValueFlags {
   None = 0b0000,
 
   /**
-   *  This value represtents an element tag.
+   *  This value represents an element tag.
    */
   ElementTag = 0b1,
 
@@ -520,7 +533,7 @@ export enum I18nParamValueFlags {
   /**
    * This value represents an i18n expression index.
    */
-  ExpressionIndex = 0b10000
+  ExpressionIndex = 0b10000,
 }
 
 /**
@@ -545,19 +558,16 @@ export enum DeferTriggerKind {
 }
 
 /**
- * Repeaters implicitly define these derived variables, and child nodes may read them.
- */
-export enum DerivedRepeaterVarIdentity {
-  First,
-  Last,
-  Even,
-  Odd,
-}
-
-/**
  * Kinds of i18n contexts. They can be created because of root i18n blocks, or ICUs.
  */
 export enum I18nContextKind {
   RootI18n,
-  Icu
+  Icu,
+  Attr,
+}
+
+export enum TemplateKind {
+  NgTemplate,
+  Structural,
+  Block,
 }

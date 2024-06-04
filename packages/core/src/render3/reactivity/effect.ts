@@ -20,7 +20,8 @@ import {DestroyRef} from '../../linker/destroy_ref';
 import {FLAGS, LViewFlags, EFFECTS_TO_SCHEDULE} from '../interfaces/view';
 
 import {assertNotInReactiveContext} from './asserts';
-
+import {performanceMarkFeature} from '../../util/performance';
+import {PendingTasks} from '../../pending_tasks';
 
 /**
  * An effect can, optionally, register a cleanup function. If registered, the cleanup is executed
@@ -63,33 +64,43 @@ export abstract class EffectScheduler {
    */
   abstract scheduleEffect(e: SchedulableEffect): void;
 
+  /**
+   * Run any scheduled effects.
+   */
+  abstract flush(): void;
+
   /** @nocollapse */
   static ɵprov = /** @pureOrBreakMyCode */ ɵɵdefineInjectable({
     token: EffectScheduler,
     providedIn: 'root',
-    factory: () => new ZoneAwareMicrotaskScheduler(),
+    factory: () => new ZoneAwareEffectScheduler(),
   });
 }
 
 /**
- * Interface to an `EffectScheduler` capable of running scheduled effects synchronously.
+ * A wrapper around `ZoneAwareQueueingScheduler` that schedules flushing via the microtask queue
+ * when.
  */
-export interface FlushableEffectRunner {
-  /**
-   * Run any scheduled effects.
-   */
-  flush(): void;
-}
-
-/**
- * An `EffectScheduler` which is capable of queueing scheduled effects per-zone, and flushing them
- * as an explicit operation.
- */
-export class ZoneAwareQueueingScheduler implements EffectScheduler, FlushableEffectRunner {
+export class ZoneAwareEffectScheduler implements EffectScheduler {
   private queuedEffectCount = 0;
-  private queues = new Map<Zone|null, Set<SchedulableEffect>>();
+  private queues = new Map<Zone | null, Set<SchedulableEffect>>();
+  private readonly pendingTasks = inject(PendingTasks);
+  private taskId: number | null = null;
 
   scheduleEffect(handle: SchedulableEffect): void {
+    this.enqueue(handle);
+
+    if (this.taskId === null) {
+      const taskId = (this.taskId = this.pendingTasks.add());
+      queueMicrotask(() => {
+        this.flush();
+        this.pendingTasks.remove(taskId);
+        this.taskId = null;
+      });
+    }
+  }
+
+  private enqueue(handle: SchedulableEffect): void {
     const zone = handle.creationZone as Zone | null;
     if (!this.queues.has(zone)) {
       this.queues.set(zone, new Set());
@@ -131,41 +142,6 @@ export class ZoneAwareQueueingScheduler implements EffectScheduler, FlushableEff
       handle.run();
     }
   }
-
-  /** @nocollapse */
-  static ɵprov = /** @pureOrBreakMyCode */ ɵɵdefineInjectable({
-    token: ZoneAwareQueueingScheduler,
-    providedIn: 'root',
-    factory: () => new ZoneAwareQueueingScheduler(),
-  });
-}
-
-/**
- * A wrapper around `ZoneAwareQueueingScheduler` that schedules flushing via the microtask queue
- * when.
- */
-export class ZoneAwareMicrotaskScheduler implements EffectScheduler {
-  private hasQueuedFlush = false;
-  private delegate = new ZoneAwareQueueingScheduler();
-  private flushTask = () => {
-    // Leave `hasQueuedFlush` as `true` so we don't queue another microtask if more effects are
-    // scheduled during flushing. The flush of the `ZoneAwareQueueingScheduler` delegate is
-    // guaranteed to empty the queue.
-    this.delegate.flush();
-    this.hasQueuedFlush = false;
-
-    // This is a variable initialization, not a method.
-    // tslint:disable-next-line:semicolon
-  };
-
-  scheduleEffect(handle: SchedulableEffect): void {
-    this.delegate.scheduleEffect(handle);
-
-    if (!this.hasQueuedFlush) {
-      queueMicrotask(this.flushTask);
-      this.hasQueuedFlush = true;
-    }
-  }
 }
 
 /**
@@ -176,16 +152,22 @@ export class ZoneAwareMicrotaskScheduler implements EffectScheduler {
  * available/requested.
  */
 class EffectHandle implements EffectRef, SchedulableEffect {
-  unregisterOnDestroy: (() => void)|undefined;
+  unregisterOnDestroy: (() => void) | undefined;
   readonly watcher: Watch;
 
   constructor(
-      private scheduler: EffectScheduler,
-      private effectFn: (onCleanup: EffectCleanupRegisterFn) => void,
-      public creationZone: Zone|null, destroyRef: DestroyRef|null,
-      private errorHandler: ErrorHandler|null, allowSignalWrites: boolean) {
+    private scheduler: EffectScheduler,
+    private effectFn: (onCleanup: EffectCleanupRegisterFn) => void,
+    public creationZone: Zone | null,
+    destroyRef: DestroyRef | null,
+    private injector: Injector,
+    allowSignalWrites: boolean,
+  ) {
     this.watcher = createWatch(
-        (onCleanup) => this.runEffect(onCleanup), () => this.schedule(), allowSignalWrites);
+      (onCleanup) => this.runEffect(onCleanup),
+      () => this.schedule(),
+      allowSignalWrites,
+    );
     this.unregisterOnDestroy = destroyRef?.onDestroy(() => this.destroy());
   }
 
@@ -193,7 +175,10 @@ class EffectHandle implements EffectRef, SchedulableEffect {
     try {
       this.effectFn(onCleanup);
     } catch (err) {
-      this.errorHandler?.handleError(err);
+      // Inject the `ErrorHandler` here in order to avoid circular DI error
+      // if the effect is used inside of a custom `ErrorHandler`.
+      const errorHandler = this.injector.get(ErrorHandler, null, {optional: true});
+      errorHandler?.handleError(err);
     }
   }
 
@@ -235,7 +220,7 @@ export interface CreateEffectOptions {
   /**
    * The `Injector` in which to create the effect.
    *
-   * If this is not provided, the current [injection context](guide/dependency-injection-context)
+   * If this is not provided, the current [injection context](guide/di/dependency-injection-context)
    * will be used instead (via `inject`).
    */
   injector?: Injector;
@@ -263,23 +248,29 @@ export interface CreateEffectOptions {
  * @developerPreview
  */
 export function effect(
-    effectFn: (onCleanup: EffectCleanupRegisterFn) => void,
-    options?: CreateEffectOptions): EffectRef {
+  effectFn: (onCleanup: EffectCleanupRegisterFn) => void,
+  options?: CreateEffectOptions,
+): EffectRef {
+  performanceMarkFeature('NgSignals');
   ngDevMode &&
-      assertNotInReactiveContext(
-          effect,
-          'Call `effect` outside of a reactive context. For example, schedule the ' +
-              'effect inside the component constructor.');
+    assertNotInReactiveContext(
+      effect,
+      'Call `effect` outside of a reactive context. For example, schedule the ' +
+        'effect inside the component constructor.',
+    );
 
   !options?.injector && assertInInjectionContext(effect);
   const injector = options?.injector ?? inject(Injector);
-  const errorHandler = injector.get(ErrorHandler, null, {optional: true});
   const destroyRef = options?.manualCleanup !== true ? injector.get(DestroyRef) : null;
 
   const handle = new EffectHandle(
-      injector.get(APP_EFFECT_SCHEDULER), effectFn,
-      (typeof Zone === 'undefined') ? null : Zone.current, destroyRef, errorHandler,
-      options?.allowSignalWrites ?? false);
+    injector.get(APP_EFFECT_SCHEDULER),
+    effectFn,
+    typeof Zone === 'undefined' ? null : Zone.current,
+    destroyRef,
+    injector,
+    options?.allowSignalWrites ?? false,
+  );
 
   // Effects need to be marked dirty manually to trigger their initial run. The timing of this
   // marking matters, because the effects may read signals that track component inputs, which are
@@ -289,7 +280,7 @@ export function effect(
   // the context of a component or not. If it is, then we check whether the component has already
   // run its update pass, and defer the effect's initial scheduling until the update pass if it
   // hasn't already run.
-  const cdr = injector.get(ChangeDetectorRef, null, {optional: true}) as ViewRef<unknown>| null;
+  const cdr = injector.get(ChangeDetectorRef, null, {optional: true}) as ViewRef<unknown> | null;
   if (!cdr || !(cdr._lView[FLAGS] & LViewFlags.FirstLViewPass)) {
     // This effect is either not running in a view injector, or the view has already
     // undergone its first change detection pass, which is necessary for any required inputs to be

@@ -27,10 +27,10 @@ import {
   isApple,
   IS_SEARCH_DIALOG_OPEN,
 } from '@angular/docs';
-import {NavigationEnd, Router, RouterLink} from '@angular/router';
-import {filter, map, startWith} from 'rxjs';
+import {ActivatedRoute, NavigationEnd, Router, RouterLink} from '@angular/router';
+import {filter, map, startWith} from 'rxjs/operators';
 import {DOCS_ROUTES, REFERENCE_ROUTES, TUTORIALS_ROUTES} from '../../../routes';
-import {GITHUB, MEDIUM, X, YOUTUBE} from '../../constants/links';
+import {GITHUB, MEDIUM, X, YOUTUBE, DISCORD} from '../../constants/links';
 import {PagePrefix} from '../../enums/pages';
 import {Theme, ThemeManager} from '../../services/theme-manager.service';
 import {VersionManager} from '../../services/version-manager.service';
@@ -79,9 +79,13 @@ export class Navigation implements OnInit {
   readonly X = X;
   readonly MEDIUM = MEDIUM;
   readonly YOUTUBE = YOUTUBE;
+  readonly DISCORD = DISCORD;
 
   readonly PRIMARY_NAV_ID = PRIMARY_NAV_ID;
   readonly SECONDARY_NAV_ID = SECONDARY_NAV_ID;
+
+  // We can't use the ActivatedRouter queryParams as we're outside the router outlet
+  readonly isUwu = 'location' in globalThis ? location.search.includes('uwu') : false;
 
   miniMenuPositions = [
     new ConnectionPositionPair(
@@ -102,6 +106,8 @@ export class Navigation implements OnInit {
   openedMenu: MenuType | null = null;
 
   currentDocsVersion = this.versionManager.currentDocsVersion;
+  currentDocsVersionMode = this.versionManager.currentDocsVersion()?.version;
+
   // Set the values of the search label and title only on the client, because the label is user-agent specific.
   searchLabel = this.isBrowser
     ? isApple
@@ -197,7 +203,8 @@ export class Navigation implements OnInit {
       this.activeRouteItem.set(PagePrefix.DOCS);
     } else if (
       urlAfterRedirects.startsWith(PagePrefix.REFERENCE) ||
-      urlAfterRedirects.startsWith(PagePrefix.API)
+      urlAfterRedirects.startsWith(PagePrefix.API) ||
+      urlAfterRedirects.startsWith(PagePrefix.UPDATE)
     ) {
       this.activeRouteItem.set(PagePrefix.REFERENCE);
     } else if (urlAfterRedirects === PagePrefix.PLAYGROUND) {

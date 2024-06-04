@@ -7,9 +7,12 @@
  */
 
 import {assertGreaterThan, assertNotEqual, assertNumber} from '../../util/assert';
-import {NO_PARENT_INJECTOR, RelativeInjectorLocation, RelativeInjectorLocationFlags} from '../interfaces/injector';
+import {
+  NO_PARENT_INJECTOR,
+  RelativeInjectorLocation,
+  RelativeInjectorLocationFlags,
+} from '../interfaces/injector';
 import {DECLARATION_VIEW, HEADER_OFFSET, LView} from '../interfaces/view';
-
 
 /// Parent Injector Utils ///////////////////////////////////////////////////////////////
 export function hasParentInjector(parentLocation: RelativeInjectorLocation): boolean {
@@ -17,13 +20,17 @@ export function hasParentInjector(parentLocation: RelativeInjectorLocation): boo
 }
 
 export function getParentInjectorIndex(parentLocation: RelativeInjectorLocation): number {
-  ngDevMode && assertNumber(parentLocation, 'Number expected');
-  ngDevMode && assertNotEqual(parentLocation as any, -1, 'Not a valid state.');
-  const parentInjectorIndex = parentLocation & RelativeInjectorLocationFlags.InjectorIndexMask;
-  ngDevMode &&
-      assertGreaterThan(
-          parentInjectorIndex, HEADER_OFFSET,
-          'Parent injector must be pointing past HEADER_OFFSET.');
+  if (ngDevMode) {
+    assertNumber(parentLocation, 'Number expected');
+    assertNotEqual(parentLocation as any, -1, 'Not a valid state.');
+    const parentInjectorIndex = parentLocation & RelativeInjectorLocationFlags.InjectorIndexMask;
+
+    assertGreaterThan(
+      parentInjectorIndex,
+      HEADER_OFFSET,
+      'Parent injector must be pointing past HEADER_OFFSET.',
+    );
+  }
   return parentLocation & RelativeInjectorLocationFlags.InjectorIndexMask;
 }
 

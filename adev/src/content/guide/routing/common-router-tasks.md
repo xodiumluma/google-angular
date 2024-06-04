@@ -168,12 +168,6 @@ set id(heroId: string) {
 ```
 
 NOTE: You can bind all route data with key, value pairs to component inputs: static or resolved route data, path parameters, matrix parameters, and query parameters.
-If you want to use the parent components route info you will need to set the router paramsInheritanceStrategy option: withRouterConfig({paramsInheritanceStrategy: 'always'})
-
-</docs-step>
-
-Note: You can bind all route data with key, value pairs to component inputs: static or resolved route data, path parameters, matrix parameters, and query parameters.
-
 If you want to use the parent components route info you will need to set the router `paramsInheritanceStrategy` option:
 `withRouterConfig({paramsInheritanceStrategy: 'always'})`
 
@@ -232,6 +226,29 @@ const routes: Routes = [
 In this example, the third route is a redirect so that the router defaults to the `first-component` route.
 Notice that this redirect precedes the wildcard route.
 Here, `path: ''` means to use the initial relative URL \(`''`\).
+
+Sometimes a redirect is not a simple, static redirect. The `redirectTo` property can also be a function
+with more complex logic that returns a string or `UrlTree`.
+
+```ts
+const routes: Routes = [
+  { path: "first-component", component: FirstComponent },
+  {
+    path: "old-user-page",
+    redirectTo: ({ queryParams }) => {
+      const errorHandler = inject(ErrorHandler);
+      const userIdParam = queryParams['userId'];
+      if (userIdParam !== undefined) {
+        return `/user/${userIdParam}`;
+      } else {
+        errorHandler.handleError(new Error('Attempted navigation to user page without user ID.'));
+        return `/not-found`;
+      }
+    },
+  },
+  { path: "user/:userId", component: OtherComponent },
+];
+```
 
 ## Nesting routes
 
@@ -380,7 +397,7 @@ The router uses an `id` to show the correct hero's details.
 First, import the following members in the component you want to navigate from.
 
 ```ts
-import { ActivatedRoute } from '&commat;angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 ```
@@ -443,7 +460,7 @@ gotoItems(hero: Hero) {
 You can configure your routes to lazy load modules, which means that Angular only loads modules as needed, rather than loading all modules when the application launches.
 Additionally, preload parts of your application in the background to improve the user experience.
 
-For more information on lazy loading and preloading see the dedicated guide lazy loading.
+For more information on lazy loading and preloading see the dedicated guide [Lazy loading](guide/ngmodules/lazy-loading).
 
 ## Preventing unauthorized access
 
@@ -624,7 +641,7 @@ The browser uses the `<base href>` value to prefix relative URLs when referencin
 Add the `<base>` element just after the `<head>` tag.
 If the `app` folder is the application root, as it is for this application, set the `href` value in `index.html` as shown here.
 
-<docs-code header="src/index.html (base-href)" path="router/src/index.html" visibleRegion="base-href"/>
+<docs-code header="src/index.html (base-href)" path="adev/src/content/examples/router/src/index.html" visibleRegion="base-href"/>
 
 ### HTML5 URLs and the `<base href>`
 

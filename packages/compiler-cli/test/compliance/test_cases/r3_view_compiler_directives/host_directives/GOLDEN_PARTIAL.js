@@ -28,7 +28,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'my-component',
                     template: '',
-                    hostDirectives: [DirectiveA, DirectiveB],
+                    hostDirectives: [DirectiveA, DirectiveB]
                 }]
         }] });
 
@@ -70,7 +70,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Directive,
             args: [{
                     standalone: true,
-                    hostDirectives: [DirectiveA],
+                    hostDirectives: [DirectiveA]
                 }]
         }] });
 export class DirectiveC {
@@ -81,7 +81,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Directive,
             args: [{
                     standalone: true,
-                    hostDirectives: [DirectiveB],
+                    hostDirectives: [DirectiveB]
                 }]
         }] });
 export class MyComponent {
@@ -93,7 +93,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'my-component',
                     template: '',
-                    hostDirectives: [DirectiveC],
+                    hostDirectives: [DirectiveC]
                 }]
         }] });
 
@@ -132,7 +132,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'my-component',
                     template: '',
-                    hostDirectives: [forwardRef(() => DirectiveB)],
+                    hostDirectives: [forwardRef(() => DirectiveB)]
                 }]
         }] });
 export class DirectiveB {
@@ -143,7 +143,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Directive,
             args: [{
                     standalone: true,
-                    hostDirectives: [{ directive: forwardRef(() => DirectiveA), inputs: ['value'] }],
+                    hostDirectives: [{ directive: forwardRef(() => DirectiveA), inputs: ['value'] }]
                 }]
         }] });
 export class DirectiveA {
@@ -212,8 +212,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     hostDirectives: [{
                             directive: HostDir,
                             inputs: ['value', 'color: colorAlias'],
-                            outputs: ['opened', 'closed: closedAlias'],
-                        }],
+                            outputs: ['opened', 'closed: closedAlias']
+                        }]
                 }]
         }] });
 
@@ -225,8 +225,8 @@ import * as i0 from "@angular/core";
 export declare class HostDir {
     value: number;
     color: string;
-    opened: EventEmitter<unknown>;
-    closed: EventEmitter<unknown>;
+    opened: EventEmitter<any>;
+    closed: EventEmitter<any>;
     static ɵfac: i0.ɵɵFactoryDeclaration<HostDir, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<HostDir, never, never, { "value": { "alias": "value"; "required": false; }; "color": { "alias": "color"; "required": false; }; }, { "opened": "opened"; "closed": "closed"; }, never, never, true, never>;
 }
@@ -276,8 +276,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
                     hostDirectives: [{
                             directive: HostDir,
                             inputs: ['valueAlias', 'colorAlias: customColorAlias'],
-                            outputs: ['openedAlias', 'closedAlias: customClosedAlias'],
-                        }],
+                            outputs: ['openedAlias', 'closedAlias: customClosedAlias']
+                        }]
                 }]
         }] });
 
@@ -289,8 +289,8 @@ import * as i0 from "@angular/core";
 export declare class HostDir {
     value: number;
     color: string;
-    opened: EventEmitter<unknown>;
-    closed: EventEmitter<unknown>;
+    opened: EventEmitter<any>;
+    closed: EventEmitter<any>;
     static ɵfac: i0.ɵɵFactoryDeclaration<HostDir, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<HostDir, never, never, { "value": { "alias": "valueAlias"; "required": false; }; "color": { "alias": "colorAlias"; "required": false; }; }, { "opened": "openedAlias"; "closed": "closedAlias"; }, never, never, true, never>;
 }

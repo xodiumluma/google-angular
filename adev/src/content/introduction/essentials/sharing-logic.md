@@ -1,8 +1,8 @@
-<docs-decorative-header title="Sharing Code" imgSrc="assets/images/dependency_injection.svg"> <!-- markdownlint-disable-line -->
+<docs-decorative-header title="Sharing Code" imgSrc="adev/src/assets/images/dependency_injection.svg"> <!-- markdownlint-disable-line -->
 Dependency injection allows you to share code.
 </docs-decorative-header>
 
-When you need to share logic between components, Angular leverages the design pattern of [dependency injection](/guide/di) that allows you to create a “service” which allows you to inject code into components while managing it from a single source of truth.
+When you need to share logic between components, Angular leverages the design pattern of [dependency injection](guide/di) that allows you to create a “service” which allows you to inject code into components while managing it from a single source of truth.
 
 ## What are services?
 
@@ -42,7 +42,7 @@ import { Component } from '@angular/core';
 import { CalculatorService } from './calculator.service';
 
 @Component({
-  selector: 'app-receipt’,
+  selector: 'app-receipt',
   template: `<h1>The total is {{ totalCost }}</h1>`,
 })
 

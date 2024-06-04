@@ -3,6 +3,11 @@
     <h6>Getting Started</h6>
     <h1 tabindex="-1">API Reference</h1>
   </header>
+
+  @if (featuredGroup().items.length) {
+  <adev-api-items-section [group]="featuredGroup()" class="adev-featured-list" />
+  }
+
   <form class="adev-reference-list-form">
     <docs-text-field
       name="query"
@@ -22,23 +27,20 @@
     </div>
     <ul class="adev-reference-list-legend">
       @for (itemType of itemTypes; track itemType) {
-      <li
-        class="adev-reference-list-legend-item"
-        [class.adev-reference-list-legend-item-active]="type() === itemType"
-        (click)="filterByItemType(itemType)"
-      >
-        <adev-api-item-label [type]="itemType" mode="short" class="adev-api-item-label" />
-        <span>{{ itemType | adevApiLabel : 'full' }}</span>
-      </li>
+        <li
+          class="adev-reference-list-legend-item"
+          [class.adev-reference-list-legend-item-active]="type() === itemType"
+          (click)="filterByItemType(itemType)"
+        >
+          <docs-api-item-label [type]="itemType" mode="short" class="docs-api-item-label" />
+          <span class="docs-api-item-label-full">{{ itemType | adevApiLabel : 'full' }}</span>
+        </li>
       }
     </ul>
   </form>
 
-  @if (featuredGroup().items.length) {
-  <adev-api-items-section [group]="featuredGroup()" class="adev-featured-list" />
-  } @for (group of filteredGroups(); track group) {
-  <adev-api-items-section [group]="group" />
+  @for (group of filteredGroups(); track group.id) {
+    <adev-api-items-section [group]="group" />
   }
 
-  <span id="deprecated-description" class="adev-deprecated-description">Deprecated</span>
 </div>

@@ -87,24 +87,24 @@ In your IDE:
 
 1. In `index.html`, replace the `<title>` element with this code to update the title of the app.
 
-    <docs-code header="Replace in src/index.html" path="first-app/steps/01-hello-world/src/index.html" visibleLines="[5]"/>
+    <docs-code header="Replace in src/index.html" path="adev/src/content/tutorials/first-app/steps/02-HomeComponent/src/index.html" visibleLines="[5]"/>
 
     Then, save the changes you just made to `index.html`.
 
 1. Next, open  `first-app/src/app/app.component.ts`.
 1. In `app.component.ts`, in the `@Component` definition, replace the `template` line with this code to change the text in the app component.
 
-    <docs-code header="Replace in src/app/app.component.ts" path="first-app/steps/01-hello-world/src/app/app.component.ts" visibleLines="[7]"/>
+    <docs-code header="Replace in src/app/app.component.ts" path="adev/src/content/tutorials/first-app/steps/02-HomeComponent/src/app/app.component.ts" visibleLines="[7,9]"/>
 
 1. In `app.component.ts`, in the `AppComponent` class definition, replace the `title` line with this code to change the component title.
 
-    <docs-code header="Replace in src/app/app.component.ts" path="first-app/steps/01-hello-world/src/app/app.component.ts" visibleLines="[11]"/>
+    <docs-code header="Replace in src/app/app.component.ts" path="adev/src/content/tutorials/first-app/steps/02-HomeComponent/src/app/app.component.ts" visibleLines="[12,14]"/>
 
     Then, save the changes you made to `app.component.ts`.
 
 1. If you stopped the `ng serve` command from step 1, in the **Terminal** window of your IDE, run `ng serve` again.
 1. Open your browser and navigate to `localhost:4200` and confirm that the app builds without error and displays *Hello world* in the title and body of your app:
-    <img alt="browser frame of page displaying the text 'Hello World'" src="assets/content/images/tutorials/first-app/homes-app-lesson-01-browser.png">
+    <img alt="browser frame of page displaying the text 'Hello World'" src="assets/images/tutorials/first-app/homes-app-lesson-01-browser.png">
 </docs-step>
 
 </docs-workflow>
