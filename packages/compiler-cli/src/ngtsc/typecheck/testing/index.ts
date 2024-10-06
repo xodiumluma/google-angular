@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {
@@ -13,10 +13,13 @@ import {
   ParseSourceSpan,
   parseTemplate,
   ParseTemplateOptions,
+  PropertyRead,
+  PropertyWrite,
   R3TargetBinder,
   SchemaMetadata,
   SelectorMatcher,
   TmplAstElement,
+  TmplAstLetDeclaration,
 } from '@angular/compiler';
 import {readFileSync} from 'fs';
 import path from 'path';
@@ -88,6 +91,7 @@ import {OutOfBandDiagnosticRecorder} from '../src/oob';
 import {TypeCheckShimGenerator} from '../src/shim';
 import {TcbGenericContextBehavior} from '../src/type_check_block';
 import {TypeCheckFile} from '../src/type_check_file';
+import {sfExtensionData} from '../../shims';
 
 export function typescriptLibDts(): TestFile {
   return {
@@ -278,6 +282,7 @@ export const ALL_ENABLED_CONFIG: Readonly<TypeCheckingConfig> = {
   useInlineTypeConstructors: true,
   suggestionsForSuboptimalTypeInference: false,
   controlFlowPreventingContentProjection: 'warning',
+  unusedStandaloneImports: 'warning',
   allowSignalsInTwoWayBindings: true,
 };
 
@@ -410,6 +415,7 @@ export function tcb(
     checkControlFlowBodies: true,
     alwaysCheckSchemaInTemplateBodies: true,
     controlFlowPreventingContentProjection: 'warning',
+    unusedStandaloneImports: 'warning',
     strictSafeNavigationTypes: true,
     useContextGenericType: true,
     strictLiteralTypes: true,
@@ -490,6 +496,7 @@ export function setup(
     config?: Partial<TypeCheckingConfig>;
     options?: ts.CompilerOptions;
     inlining?: boolean;
+    parseOptions?: ParseTemplateOptions;
   } = {},
 ): {
   templateTypeChecker: TemplateTypeChecker;
@@ -498,6 +505,7 @@ export function setup(
 } {
   const files = [typescriptLibDts(), ...angularCoreDtsFiles(), angularAnimationsDts()];
   const fakeMetadataRegistry = new Map();
+  const shims = new Map<AbsoluteFsPath, AbsoluteFsPath>();
 
   for (const target of targets) {
     let contents: string;
@@ -516,8 +524,10 @@ export function setup(
     });
 
     if (!target.fileName.endsWith('.d.ts')) {
+      const shimName = TypeCheckShimGenerator.shimFor(target.fileName);
+      shims.set(target.fileName, shimName);
       files.push({
-        name: TypeCheckShimGenerator.shimFor(target.fileName),
+        name: shimName,
         contents: 'export const MODULE = true;',
       });
     }
@@ -572,6 +582,15 @@ export function setup(
     const sf = getSourceFileOrError(program, target.fileName);
     const scope = makeScope(program, sf, target.declarations ?? []);
 
+    if (shims.has(target.fileName)) {
+      const shimFileName = shims.get(target.fileName)!;
+      const shimSf = getSourceFileOrError(program, shimFileName);
+      sfExtensionData(shimSf).fileShim = {
+        extension: 'ngtypecheck',
+        generatedFrom: target.fileName,
+      };
+    }
+
     for (const className of Object.keys(target.templates)) {
       const classDecl = getClass(sf, className);
       scopeMap.set(classDecl, scope);
@@ -591,7 +610,7 @@ export function setup(
         const template = target.templates[className];
         const templateUrl = `${className}.html`;
         const templateFile = new ParseSourceFile(template, templateUrl);
-        const {nodes, errors} = parseTemplate(template, templateUrl);
+        const {nodes, errors} = parseTemplate(template, templateUrl, overrides.parseOptions);
         if (errors !== null) {
           throw new Error('Template parse errors: \n' + errors.join('\n'));
         }
@@ -876,6 +895,8 @@ function getDirectiveMetaFromDeclaration(
     ngContentSelectors: decl.ngContentSelectors || null,
     preserveWhitespaces: decl.preserveWhitespaces ?? false,
     isExplicitlyDeferred: false,
+    imports: decl.imports,
+    rawImports: null,
     hostDirectives:
       decl.hostDirectives === undefined
         ? null
@@ -931,6 +952,7 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
         isStandalone: false,
         isSignal: false,
         imports: null,
+        rawImports: null,
         deferredImports: null,
         schemas: null,
         decorator: null,
@@ -938,6 +960,7 @@ function makeScope(program: ts.Program, sf: ts.SourceFile, decls: TestDeclaratio
         ngContentSelectors: decl.ngContentSelectors || null,
         preserveWhitespaces: decl.preserveWhitespaces ?? false,
         isExplicitlyDeferred: false,
+        inputFieldNamesFromMetadataArray: null,
         hostDirectives:
           decl.hostDirectives === undefined
             ? null
@@ -1025,4 +1048,15 @@ export class NoopOobRecorder implements OutOfBandDiagnosticRecorder {
   illegalForLoopTrackAccess(): void {}
   inaccessibleDeferredTriggerElement(): void {}
   controlFlowPreventingContentProjection(): void {}
+  illegalWriteToLetDeclaration(
+    templateId: TemplateId,
+    node: PropertyWrite,
+    target: TmplAstLetDeclaration,
+  ): void {}
+  letUsedBeforeDefinition(
+    templateId: TemplateId,
+    node: PropertyRead,
+    target: TmplAstLetDeclaration,
+  ): void {}
+  conflictingDeclaration(templateId: TemplateId, current: TmplAstLetDeclaration): void {}
 }

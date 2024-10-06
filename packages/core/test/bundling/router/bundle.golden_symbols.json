@@ -30,7 +30,10 @@
     "name": "ActivationStart"
   },
   {
-    "name": "AfterRenderEventManager"
+    "name": "AfterRenderManager"
+  },
+  {
+    "name": "AfterRenderPhase"
   },
   {
     "name": "AnonymousSubject"
@@ -213,6 +216,9 @@
     "name": "EVENT_MANAGER_PLUGINS"
   },
   {
+    "name": "EffectScheduler"
+  },
+  {
     "name": "ElementRef"
   },
   {
@@ -271,6 +277,9 @@
   },
   {
     "name": "INPUT_BINDER"
+  },
+  {
+    "name": "INPUT_SIGNAL_NODE"
   },
   {
     "name": "INTERNAL_APPLICATION_ERROR_HANDLER"
@@ -519,7 +528,7 @@
     "name": "PathLocationStrategy"
   },
   {
-    "name": "PendingTasks"
+    "name": "PendingTasksInternal"
   },
   {
     "name": "PlatformLocation"
@@ -549,10 +558,19 @@
     "name": "REACTIVE_LVIEW_CONSUMER_NODE"
   },
   {
+    "name": "REACTIVE_NODE"
+  },
+  {
     "name": "REMOVE_STYLES_ON_COMPONENT_DESTROY"
   },
   {
+    "name": "REQUIRED_UNSET_VALUE"
+  },
+  {
     "name": "ROUTER_CONFIGURATION"
+  },
+  {
+    "name": "ROUTER_OUTLET_DATA"
   },
   {
     "name": "ROUTER_PRELOADER"
@@ -633,10 +651,16 @@
     "name": "SAFE_URL_PATTERN"
   },
   {
+    "name": "SCHEDULE_IN_ROOT_ZONE"
+  },
+  {
     "name": "SEGMENT_RE"
   },
   {
     "name": "SIGNAL"
+  },
+  {
+    "name": "SIGNAL_NODE"
   },
   {
     "name": "SIMPLE_CHANGES_STORE"
@@ -676,6 +700,9 @@
   },
   {
     "name": "Subscription"
+  },
+  {
+    "name": "TEMPORARY_CONSUMER_NODE"
   },
   {
     "name": "TESTABILITY"
@@ -762,7 +789,13 @@
     "name": "ZONELESS_SCHEDULER_DISABLED"
   },
   {
+    "name": "ZoneAwareEffectScheduler"
+  },
+  {
     "name": "ZoneStablePendingTask"
+  },
+  {
+    "name": "_AfterRenderImpl"
   },
   {
     "name": "_ComponentFactoryResolver"
@@ -837,9 +870,6 @@
     "name": "_wasLastNodeCreated"
   },
   {
-    "name": "_wrapInTimeout"
-  },
-  {
     "name": "activeConsumer"
   },
   {
@@ -852,7 +882,7 @@
     "name": "addToArray"
   },
   {
-    "name": "addToViewTree"
+    "name": "addToEndOfViewTree"
   },
   {
     "name": "advanceActivatedRoute"
@@ -865,6 +895,9 @@
   },
   {
     "name": "allowSanitizationBypassAndThrow"
+  },
+  {
+    "name": "angularZoneInstanceIdProperty"
   },
   {
     "name": "appendChild"
@@ -891,6 +924,12 @@
     "name": "assertConsumerNode"
   },
   {
+    "name": "assertNotDestroyed"
+  },
+  {
+    "name": "assertProducerNode"
+  },
+  {
     "name": "attachPatchData"
   },
   {
@@ -907,6 +946,9 @@
   },
   {
     "name": "booleanAttribute"
+  },
+  {
+    "name": "bootstrap"
   },
   {
     "name": "callHook"
@@ -966,7 +1008,16 @@
     "name": "configureViewWithDirective"
   },
   {
+    "name": "consumerBeforeComputation"
+  },
+  {
+    "name": "consumerDestroy"
+  },
+  {
     "name": "consumerIsLive"
+  },
+  {
+    "name": "consumerMarkDirty"
   },
   {
     "name": "consumerPollProducersForChange"
@@ -1020,6 +1071,9 @@
     "name": "createInjectorWithoutInjectorInstances"
   },
   {
+    "name": "createInputSignal"
+  },
+  {
     "name": "createInvalidObservableTypeError"
   },
   {
@@ -1027,6 +1081,9 @@
   },
   {
     "name": "createLView"
+  },
+  {
+    "name": "createLinkElement"
   },
   {
     "name": "createNewSegmentChildren"
@@ -1047,6 +1104,9 @@
     "name": "createOperatorSubscriber"
   },
   {
+    "name": "createOrReusePlatformInjector"
+  },
+  {
     "name": "createResultForNode"
   },
   {
@@ -1054,6 +1114,9 @@
   },
   {
     "name": "createSegmentGroupFromRoute"
+  },
+  {
+    "name": "createStyleElement"
   },
   {
     "name": "createTView"
@@ -1080,10 +1143,10 @@
     "name": "deepForEachProvider"
   },
   {
-    "name": "defaultErrorFactory"
+    "name": "defaultEquals"
   },
   {
-    "name": "defaultErrorHandler2"
+    "name": "defaultErrorFactory"
   },
   {
     "name": "defaultIfEmpty"
@@ -1308,6 +1371,9 @@
     "name": "getInherited"
   },
   {
+    "name": "getInitialLViewFlagsFromDef"
+  },
+  {
     "name": "getInjectImplementation"
   },
   {
@@ -1470,6 +1536,9 @@
     "name": "importProvidersFrom"
   },
   {
+    "name": "inNotificationPhase"
+  },
+  {
     "name": "includeViewProviders"
   },
   {
@@ -1515,6 +1584,15 @@
     "name": "innerFrom"
   },
   {
+    "name": "input"
+  },
+  {
+    "name": "inputFunction"
+  },
+  {
+    "name": "inputRequiredFunction"
+  },
+  {
     "name": "insertBloom"
   },
   {
@@ -1533,6 +1611,12 @@
     "name": "invokeHostBindingsInCreationMode"
   },
   {
+    "name": "isAngularZoneProperty"
+  },
+  {
+    "name": "isApplicationBootstrapConfig"
+  },
+  {
     "name": "isArrayLike"
   },
   {
@@ -1546,6 +1630,9 @@
   },
   {
     "name": "isComponentHost"
+  },
+  {
+    "name": "isConsumerNode"
   },
   {
     "name": "isContentQueryHost"
@@ -1761,7 +1848,7 @@
     "name": "ngOnChangesSetInput"
   },
   {
-    "name": "ngZoneApplicationErrorHandlerFactory"
+    "name": "ngZoneInstanceId"
   },
   {
     "name": "noMatch"
@@ -1833,6 +1920,15 @@
     "name": "processInjectorTypesWithProviders"
   },
   {
+    "name": "producerAccessed"
+  },
+  {
+    "name": "producerAddLiveConsumer"
+  },
+  {
+    "name": "producerNotifyConsumers"
+  },
+  {
     "name": "producerRemoveLiveConsumerAtIndex"
   },
   {
@@ -1869,6 +1965,9 @@
     "name": "remove"
   },
   {
+    "name": "removeElements"
+  },
+  {
     "name": "removeFromArray"
   },
   {
@@ -1903,6 +2002,9 @@
   },
   {
     "name": "routes"
+  },
+  {
+    "name": "runEffectsInView"
   },
   {
     "name": "runInInjectionContext"
@@ -2049,6 +2151,9 @@
     "name": "throwIfEmpty"
   },
   {
+    "name": "throwInvalidWriteToSignalErrorFn"
+  },
+  {
     "name": "throwProviderNotFoundError"
   },
   {
@@ -2068,6 +2173,9 @@
   },
   {
     "name": "uniqueIdCounter"
+  },
+  {
+    "name": "unregisterLView"
   },
   {
     "name": "unwrapElementRef"
@@ -2092,6 +2200,9 @@
   },
   {
     "name": "viewAttachedToChangeDetector"
+  },
+  {
+    "name": "viewShouldHaveReactiveConsumer"
   },
   {
     "name": "walkProviderTree"

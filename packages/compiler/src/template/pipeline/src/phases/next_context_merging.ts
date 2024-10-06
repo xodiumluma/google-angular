@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import * as o from '../../../../output/output_ast';
@@ -78,6 +78,7 @@ function mergeNextContextsInOps(ops: ir.OpList<ir.UpdateOp>): void {
             break;
           case ir.ExpressionKind.GetCurrentView:
           case ir.ExpressionKind.Reference:
+          case ir.ExpressionKind.ContextLetReference:
             // Can't merge past a dependency on the context.
             tryToMerge = false;
             break;

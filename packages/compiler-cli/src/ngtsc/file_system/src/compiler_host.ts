@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 /// <reference types="node" />
@@ -22,16 +22,7 @@ export class NgtscCompilerHost implements ts.CompilerHost {
   getSourceFile(fileName: string, languageVersion: ts.ScriptTarget): ts.SourceFile | undefined {
     const text = this.readFile(fileName);
     return text !== undefined
-      ? ts.createSourceFile(
-          fileName,
-          text,
-          {
-            // Not passing the implied Node format appears not break program reuse in TS 5.5.
-            impliedNodeFormat: undefined,
-            languageVersion,
-          },
-          true,
-        )
+      ? ts.createSourceFile(fileName, text, languageVersion, true)
       : undefined;
   }
 

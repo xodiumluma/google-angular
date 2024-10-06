@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import ts from 'typescript';
@@ -129,6 +129,7 @@ export function tsCreateTypeQueryForCoercedInput(
 export function tsCreateVariable(
   id: ts.Identifier,
   initializer: ts.Expression,
+  flags: ts.NodeFlags | null = null,
 ): ts.VariableStatement {
   const decl = ts.factory.createVariableDeclaration(
     /* name */ id,
@@ -138,7 +139,9 @@ export function tsCreateVariable(
   );
   return ts.factory.createVariableStatement(
     /* modifiers */ undefined,
-    /* declarationList */ [decl],
+    /* declarationList */ flags === null
+      ? [decl]
+      : ts.factory.createVariableDeclarationList([decl], flags),
   );
 }
 

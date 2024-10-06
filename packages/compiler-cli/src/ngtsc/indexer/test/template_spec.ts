@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {BoundTarget} from '@angular/compiler';
@@ -13,6 +13,7 @@ import {
   AttributeIdentifier,
   ElementIdentifier,
   IdentifierKind,
+  LetDeclarationIdentifier,
   ReferenceIdentifier,
   TemplateNodeIdentifier,
   TopLevelIdentifier,
@@ -726,6 +727,30 @@ runInEachFileSystem(() => {
             target: variableIdentifier,
           },
         ] as TopLevelIdentifier[]),
+      );
+    });
+  });
+
+  describe('let declarations', () => {
+    it('should discover references to let declaration', () => {
+      const template = `@let foo = 123; <div [someInput]="foo"></div>`;
+      const refs = getTemplateIdentifiers(bind(template));
+      const letIdentifier: LetDeclarationIdentifier = {
+        name: 'foo',
+        kind: IdentifierKind.LetDeclaration,
+        span: new AbsoluteSourceSpan(5, 8),
+      };
+
+      expect(Array.from(refs)).toEqual(
+        jasmine.arrayContaining([
+          letIdentifier,
+          {
+            name: 'foo',
+            kind: IdentifierKind.Property,
+            span: new AbsoluteSourceSpan(34, 37),
+            target: letIdentifier,
+          },
+        ]),
       );
     });
   });

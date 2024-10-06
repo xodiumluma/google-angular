@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {assertDefined, throwError} from '../util/assert';
@@ -28,13 +28,14 @@ export function assertTNodeType(
 export function assertPureTNodeType(type: TNodeType) {
   if (
     !(
-      type === TNodeType.Element || //
-      type === TNodeType.Text || //
-      type === TNodeType.Container || //
-      type === TNodeType.ElementContainer || //
-      type === TNodeType.Icu || //
-      type === TNodeType.Projection || //
-      type === TNodeType.Placeholder
+      type === TNodeType.Element ||
+      type === TNodeType.Text ||
+      type === TNodeType.Container ||
+      type === TNodeType.ElementContainer ||
+      type === TNodeType.Icu ||
+      type === TNodeType.Projection ||
+      type === TNodeType.Placeholder ||
+      type === TNodeType.LetDeclaration
     )
   ) {
     throwError(

@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {LanguageService} from '../../src/language_service';
@@ -228,6 +228,18 @@ describe('type definitions', () => {
 
       expect(definitions[0].textSpan).toEqual('Hero');
       expect(definitions[0].contextSpan).toContain('export interface Hero');
+    });
+  });
+
+  describe('@let declarations', () => {
+    it('should work for a let declaration', () => {
+      const definitions = getTypeDefinitions({
+        templateOverride: `@let address = hero.address; {{addr¦ess}}`,
+      });
+
+      expect(definitions.length).toEqual(1);
+      expect(definitions[0].textSpan).toBe('Address');
+      expect(definitions[0].contextSpan).toContain('export interface Address');
     });
   });
 

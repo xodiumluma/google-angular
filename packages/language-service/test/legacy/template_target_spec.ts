@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {ParseError, parseTemplate} from '@angular/compiler';
@@ -148,6 +148,15 @@ describe('getTargetAtPosition for template AST', () => {
 
   it('should locate bound event value', () => {
     const {errors, nodes, position} = parse(`<test-cmp (foo)="b¦ar()"></test-cmp>`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isExpressionNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(e.PropertyRead);
+  });
+
+  it('should locate bound event nested value', () => {
+    const {errors, nodes, position} = parse(`<test-cmp (foo)="nested.b¦ar()"></test-cmp>`);
     expect(errors).toBe(null);
     const {context} = getTargetAtPosition(nodes, position)!;
     const {node} = context as SingleNodeTarget;
@@ -331,6 +340,15 @@ describe('getTargetAtPosition for template AST', () => {
     const {node} = context as SingleNodeTarget;
     expect(isTemplateNode(node!)).toBe(true);
     expect(node).toBeInstanceOf(t.Variable);
+  });
+
+  it('should locate a @let name', () => {
+    const {errors, nodes, position} = parse(`@let va¦lue = 1337;`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isTemplateNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(t.LetDeclaration);
   });
 
   it('should locate template children', () => {
@@ -659,6 +677,16 @@ describe('getTargetAtPosition for expression AST', () => {
     const {node} = context as SingleNodeTarget;
     expect(isExpressionNode(node!)).toBe(true);
     expect(node).toBeInstanceOf(e.Conditional);
+  });
+
+  it('should locate a @let value', () => {
+    const {errors, nodes, position} = parse(`@let value = 13¦37;`);
+    expect(errors).toBe(null);
+    const {context} = getTargetAtPosition(nodes, position)!;
+    const {node} = context as SingleNodeTarget;
+    expect(isExpressionNode(node!)).toBe(true);
+    expect(node).toBeInstanceOf(e.LiteralPrimitive);
+    expect((node as e.LiteralPrimitive).value).toBe(1337);
   });
 
   describe('object literal shorthand', () => {

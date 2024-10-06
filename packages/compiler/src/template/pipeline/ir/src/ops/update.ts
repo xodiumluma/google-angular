@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {SecurityContext} from '../../../../../core';
@@ -12,6 +12,7 @@ import * as o from '../../../../../output/output_ast';
 import {ParseSourceSpan} from '../../../../../parse_util';
 import {
   BindingKind,
+  DeferOpModifierKind,
   I18nExpressionFor,
   I18nParamResolutionTime,
   OpKind,
@@ -51,7 +52,8 @@ export type UpdateOp =
   | I18nExpressionOp
   | I18nApplyOp
   | RepeaterOp
-  | DeferWhenOp;
+  | DeferWhenOp
+  | StoreLetOp;
 
 /**
  * A logical operation to perform string interpolation on a text node.
@@ -772,9 +774,9 @@ export interface DeferWhenOp extends Op<UpdateOp>, DependsOnSlotContextOpTrait, 
   expr: o.Expression;
 
   /**
-   * Whether to emit the prefetch version of the instruction.
+   * Modifier set on the trigger by the user (e.g. `hydrate`, `prefetch` etc).
    */
-  prefetch: boolean;
+  modifier: DeferOpModifierKind;
 
   sourceSpan: ParseSourceSpan;
 }
@@ -782,14 +784,14 @@ export interface DeferWhenOp extends Op<UpdateOp>, DependsOnSlotContextOpTrait, 
 export function createDeferWhenOp(
   target: XrefId,
   expr: o.Expression,
-  prefetch: boolean,
+  modifier: DeferOpModifierKind,
   sourceSpan: ParseSourceSpan,
 ): DeferWhenOp {
   return {
     kind: OpKind.DeferWhen,
     target,
     expr,
-    prefetch,
+    modifier,
     sourceSpan,
     ...NEW_OP,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
@@ -946,6 +948,44 @@ export function createI18nApplyOp(
     owner,
     handle,
     sourceSpan,
+    ...NEW_OP,
+  };
+}
+
+/**
+ * Op to store the current value of a `@let` declaration.
+ */
+export interface StoreLetOp extends Op<UpdateOp>, ConsumesVarsTrait {
+  kind: OpKind.StoreLet;
+  sourceSpan: ParseSourceSpan;
+
+  /** Name that the user set when declaring the `@let`. */
+  declaredName: string;
+
+  /** XrefId of the slot in which the call may write its value. */
+  target: XrefId;
+
+  /** Value of the `@let` declaration. */
+  value: o.Expression;
+}
+
+/**
+ * Creates a `StoreLetOp`.
+ */
+export function createStoreLetOp(
+  target: XrefId,
+  declaredName: string,
+  value: o.Expression,
+  sourceSpan: ParseSourceSpan,
+): StoreLetOp {
+  return {
+    kind: OpKind.StoreLet,
+    target,
+    declaredName,
+    value,
+    sourceSpan,
+    ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
+    ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
   };
 }

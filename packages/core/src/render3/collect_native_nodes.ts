@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {assertParentView} from './assert';
@@ -25,6 +25,12 @@ export function collectNativeNodes(
   isProjection: boolean = false,
 ): any[] {
   while (tNode !== null) {
+    // Let declarations don't have corresponding DOM nodes so we skip over them.
+    if (tNode.type === TNodeType.LetDeclaration) {
+      tNode = isProjection ? tNode.projectionNext : tNode.next;
+      continue;
+    }
+
     ngDevMode &&
       assertTNodeType(
         tNode,

@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {RuntimeError, RuntimeErrorCode} from '../errors';
@@ -70,6 +70,8 @@ function getDevModeNodeName(tNode: TNode) {
     return 'an <ng-container>';
   } else if (tNode.type & TNodeType.Container) {
     return 'an <ng-template>';
+  } else if (tNode.type & TNodeType.LetDeclaration) {
+    return 'an @let declaration';
   } else {
     return 'a node';
   }

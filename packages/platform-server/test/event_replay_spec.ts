@@ -3,11 +3,18 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {DOCUMENT} from '@angular/common';
-import {Component, destroyPlatform, getPlatform, Type} from '@angular/core';
+import {
+  Component,
+  destroyPlatform,
+  ErrorHandler,
+  getPlatform,
+  PLATFORM_ID,
+  Type,
+} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {
   withEventReplay,
@@ -19,7 +26,13 @@ import {provideServerRendering} from '../public_api';
 import {EVENT_DISPATCH_SCRIPT_ID, renderApplication} from '../src/utils';
 import {EventPhase} from '@angular/core/primitives/event-dispatch';
 
-import {getAppContents, hydrate, render as renderHtml, resetTViewsFor} from './dom_utils';
+import {
+  getAppContents,
+  hydrate,
+  renderAndHydrate,
+  render as renderHtml,
+  resetTViewsFor,
+} from './dom_utils';
 
 /**
  * Represents the <script> tag added by the build process to inject
@@ -36,6 +49,24 @@ function hasEventDispatchScript(content: string) {
 /** Checks whether there are any `jsaction` attributes present in the generated HTML */
 function hasJSActionAttrs(content: string) {
   return content.includes('jsaction="');
+}
+
+/**
+ * Enables strict error handler that fails a test
+ * if there was an error reported to the ErrorHandler.
+ */
+function withStrictErrorHandler() {
+  class StrictErrorHandler extends ErrorHandler {
+    override handleError(error: any): void {
+      fail(error);
+    }
+  }
+  return [
+    {
+      provide: ErrorHandler,
+      useClass: StrictErrorHandler,
+    },
+  ];
 }
 
 describe('event replay', () => {
@@ -61,6 +92,7 @@ describe('event replay', () => {
 
   afterEach(() => {
     doc.body.outerHTML = '<body></body>';
+    window._ejsas = {};
   });
 
   /**
@@ -174,46 +206,6 @@ describe('event replay', () => {
       hydrationFeatures: [withEventReplay()],
     });
     expect(outerOnClickSpy).toHaveBeenCalledBefore(innerOnClickSpy);
-  });
-
-  it('should serialize event types to be listened to and jsaction attribute', async () => {
-    const clickSpy = jasmine.createSpy('onClick');
-    const focusSpy = jasmine.createSpy('onFocus');
-    @Component({
-      standalone: true,
-      selector: 'app',
-      template: `
-            <div (click)="onClick()" id="click-element">
-              <div id="focus-container">
-                <div id="focus-action-element" (focus)="onFocus()">
-                  <button id="focus-target-element">Focus Button</button>
-                </div>
-              </div>
-            </div>
-          `,
-    })
-    class SimpleComponent {
-      onClick = clickSpy;
-      onFocus = focusSpy;
-    }
-    const html = await ssr(SimpleComponent);
-    const ssrContents = getAppContents(html);
-
-    render(doc, ssrContents);
-    const el = doc.getElementById('click-element')!;
-    const button = doc.getElementById('focus-target-element')!;
-    const clickEvent = new CustomEvent('click', {bubbles: true});
-    el.dispatchEvent(clickEvent);
-    const focusEvent = new CustomEvent('focus');
-    button.dispatchEvent(focusEvent);
-    expect(clickSpy).not.toHaveBeenCalled();
-    expect(focusSpy).not.toHaveBeenCalled();
-    resetTViewsFor(SimpleComponent);
-    const appRef = await hydrate(doc, SimpleComponent, {
-      hydrationFeatures: [withEventReplay()],
-    });
-    expect(clickSpy).toHaveBeenCalled();
-    expect(focusSpy).toHaveBeenCalled();
   });
 
   it('should remove jsaction attributes, but continue listening to events.', async () => {
@@ -402,6 +394,17 @@ describe('event replay', () => {
 
       expect(hasJSActionAttrs(ssrContents)).toBeFalse();
       expect(hasEventDispatchScript(ssrContents)).toBeFalse();
+
+      resetTViewsFor(SimpleComponent);
+      await renderAndHydrate(doc, ssrContents, SimpleComponent, {
+        envProviders: [
+          {provide: PLATFORM_ID, useValue: 'browser'},
+          // This ensures that there are no errors while bootstrapping an application
+          // that has no events, but enables Event Replay feature.
+          withStrictErrorHandler(),
+        ],
+        hydrationFeatures: [withEventReplay()],
+      });
     });
 
     it('should not replay mouse events', async () => {
@@ -462,7 +465,7 @@ describe('event replay', () => {
       // the inlined script).
       expect(ssrContents).toContain(
         `<script type="text/javascript" id="ng-event-dispatch-contract"></script>` +
-          `<script>window.__jsaction_bootstrap('ngContracts', document.body, "ng", ["click"]);</script>`,
+          `<script>window.__jsaction_bootstrap(document.body,"ng",["click"],[]);</script>`,
       );
     });
   });

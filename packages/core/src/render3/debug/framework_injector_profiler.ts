@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {Injector} from '../../di/injector';
@@ -207,11 +207,13 @@ function handleInstanceCreatedByInjectorEvent(
 
   // if our value is an instance of a standalone component, map the injector of that standalone
   // component to the component class. Otherwise, this event is a noop.
-  let standaloneComponent: Type<unknown> | undefined = undefined;
+  let standaloneComponent: Type<unknown> | undefined | null = undefined;
   if (typeof value === 'object') {
-    standaloneComponent = value?.constructor as Type<unknown>;
+    standaloneComponent = value?.constructor as Type<unknown> | undefined | null;
   }
-  if (standaloneComponent === undefined || !isStandaloneComponent(standaloneComponent)) {
+
+  // We want to also cover if `standaloneComponent === null` in addition to `undefined`
+  if (standaloneComponent == undefined || !isStandaloneComponent(standaloneComponent)) {
     return;
   }
 

@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import ts from 'typescript';
@@ -22,6 +22,10 @@ interface SourceFileWithIdentifiers extends ts.SourceFile {
  */
 export function createGenerateUniqueIdentifierHelper(): ImportManagerConfig['generateUniqueIdentifier'] {
   const generatedIdentifiers = new Set<string>();
+  const isGeneratedIdentifier = (sf: ts.SourceFile, identifierName: string) =>
+    generatedIdentifiers.has(`${sf.fileName}@@${identifierName}`);
+  const markIdentifierAsGenerated = (sf: ts.SourceFile, identifierName: string) =>
+    generatedIdentifiers.add(`${sf.fileName}@@${identifierName}`);
 
   return (sourceFile: ts.SourceFile, symbolName: string) => {
     const sf = sourceFile as SourceFileWithIdentifiers;
@@ -30,10 +34,10 @@ export function createGenerateUniqueIdentifierHelper(): ImportManagerConfig['gen
     }
 
     const isUniqueIdentifier = (name: string) =>
-      !sf.identifiers!.has(name) && !generatedIdentifiers.has(name);
+      !sf.identifiers!.has(name) && !isGeneratedIdentifier(sf, name);
 
     if (isUniqueIdentifier(symbolName)) {
-      generatedIdentifiers.add(symbolName);
+      markIdentifierAsGenerated(sf, symbolName);
       return null;
     }
 
@@ -43,7 +47,7 @@ export function createGenerateUniqueIdentifierHelper(): ImportManagerConfig['gen
       name = `${symbolName}_${counter++}`;
     } while (!isUniqueIdentifier(name));
 
-    generatedIdentifiers.add(name);
+    markIdentifierAsGenerated(sf, name);
     return ts.factory.createUniqueName(name, ts.GeneratedIdentifierFlags.Optimistic);
   };
 }

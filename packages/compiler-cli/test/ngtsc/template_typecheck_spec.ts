@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import ts from 'typescript';
@@ -535,7 +535,9 @@ runInEachFileSystem(() => {
       const diags = env.driveDiagnostics();
       expect(diags.length).toBe(1);
       expect(diags[0].messageText).toEqual(
-        `Type '{ id: number; }' is not assignable to type '{ id: string; }'.`,
+        jasmine.objectContaining({
+          messageText: `Type '{ id: number; }' is not assignable to type '{ id: string; }'.`,
+        }),
       );
     });
 
@@ -1486,7 +1488,7 @@ runInEachFileSystem(() => {
 
       const diags = env.driveDiagnostics();
       expect(diags.length).toBe(1);
-      expect(diags[0].messageText).toContain(
+      expect((diags[0].messageText as ts.DiagnosticMessageChain).messageText).toContain(
         `is not assignable to type 'TrackByFunction<UnrelatedType>'.`,
       );
     });
@@ -4467,6 +4469,32 @@ suppress
         ]);
       });
 
+      it('should check `hydrate when` trigger expression', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @defer (hydrate when isVisible() || does_not_exist) {Hello}
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            isVisible() {
+              return true;
+            }
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.map((d) => ts.flattenDiagnosticMessageText(d.messageText, ''))).toEqual([
+          `Property 'does_not_exist' does not exist on type 'Main'.`,
+        ]);
+      });
+
       it('should report if a deferred trigger reference does not exist', () => {
         env.write(
           'test.ts',
@@ -5503,7 +5531,7 @@ suppress
           })
           export class TwoWayDir {
             @Input() value: number = 0;
-            @Output() valueChanges: EventEmitter<number> = new EventEmitter();
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
           }
 
           @Component({
@@ -5539,7 +5567,7 @@ suppress
           })
           export class TwoWayDir {
             @Input() value: number = 0;
-            @Output() valueChanges: EventEmitter<number> = new EventEmitter();
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
           }
 
           @Component({
@@ -5818,7 +5846,7 @@ suppress
         ]);
       });
 
-      it('should not allow usages of aliased `if` block variables inside the tracking exprssion', () => {
+      it('should not allow usages of aliased `if` block variables inside the tracking expression', () => {
         env.write(
           '/test.ts',
           `
@@ -6607,6 +6635,1443 @@ suppress
           `Node matches the "[bar]" slot of the "Comp" component, but will ` +
             `not be projected into the specific slot because the surrounding @default has more than one node at its root.`,
         );
+      });
+    });
+
+    describe('@let declarations', () => {
+      beforeEach(() =>
+        env.tsconfig({
+          strictTemplates: true,
+          extendedDiagnostics: {
+            checks: {
+              // Suppress the diagnostic for unused @let since some of the error cases
+              // we're checking for here also qualify as being unused which adds noise.
+              unusedLetDeclaration: 'suppress',
+            },
+          },
+        }),
+      );
+
+      it('should infer the type of a let declaration', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let one = 1;
+              {{acceptsString(one)}}
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            acceptsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(getSourceCodeForDiagnostic(diags[0])).toBe('one');
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should infer the type of a nested let declaration', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              <div>
+                @let one = 1;
+                <span>{{acceptsString(one)}}</span>
+              </div>
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            acceptsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(getSourceCodeForDiagnostic(diags[0])).toBe('one');
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should check the expression of a let declaration', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = {} + 1;
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(getSourceCodeForDiagnostic(diags[0])).toBe('{} + 1');
+        expect(diags[0].messageText).toBe(
+          `Operator '+' cannot be applied to types '{}' and 'number'.`,
+        );
+      });
+
+      it('should narrow the type of a let declaration used directly in the template', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = cond ? 1 : 'one';
+
+              @if (value === 1) {
+                {{expectsString(value)}}
+              }
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            cond: boolean = true;
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(getSourceCodeForDiagnostic(diags[0])).toBe('value');
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should narrow the type of a let declaration inside an event listener', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = cond ? 1 : 'one';
+
+              @if (value === 1) {
+                <button (click)="expectsString(value)">Click me</button>
+              }
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            cond: boolean = true;
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(getSourceCodeForDiagnostic(diags[0])).toBe('value');
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should be able to access the let declaration from a parent embedded view', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              <ng-template>
+                @let value = 1;
+
+                <ng-template>
+                  @if (true) {
+                    @switch (1) {
+                      @case (1) {
+                        <ng-template>{{expectsString(value)}}</ng-template>
+                      }
+                    }
+                  }
+                </ng-template>
+              </ng-template>
+
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should not be able to access a let declaration from a child embedded view', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @if (true) {
+                @let value = 1;
+              }
+
+              {{value}}
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(`Property 'value' does not exist on type 'Main'.`);
+      });
+
+      it('should not be able to access a let declaration from a sibling embedded view', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @if (true) {
+                @let value = 1;
+              }
+
+              @if (true) {
+                {{value}}
+              }
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(`Property 'value' does not exist on type 'Main'.`);
+      });
+
+      it('should give precedence to a local let declaration over a component property', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = 1;
+              {{expectsString(value)}}
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            value = 'one';
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should give precedence to a local let declaration over one from a parent view', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = 'one';
+
+              @if (true) {
+                @let value = 1;
+                {{expectsString(value)}}
+              }
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should not allow multiple @let declarations with the same name within a scope', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @if (true) {
+                @let value = 1;
+                @let value = 'one';
+                {{value}}
+              }
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot declare @let called 'value' as there is another symbol in the template with the same name.`,
+        );
+      });
+
+      it('should not allow @let declaration with the same name as a local reference defined before it', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              <input #value>
+              @let value = 1;
+              {{value}}
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot declare @let called 'value' as there is another symbol in the template with the same name.`,
+        );
+      });
+
+      it('should not allow @let declaration with the same name as a local reference defined after it', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = 1;
+              <input #value>
+              {{value}}
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot declare @let called 'value' as there is another symbol in the template with the same name.`,
+        );
+      });
+
+      it('should not allow @let declaration with the same name as a template variable', () => {
+        env.write(
+          'test.ts',
+          `
+            import {Component} from '@angular/core';
+            import {CommonModule} from '@angular/common';
+
+            @Component({
+              template: \`
+                <div *ngIf="x as value">
+                  @let value = 1;
+                  {{value}}
+                </div>
+              \`,
+              standalone: true,
+              imports: [CommonModule],
+            })
+            export class Main {
+              x!: unknown;
+            }
+          `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot declare @let called 'value' as there is another symbol in the template with the same name.`,
+        );
+      });
+
+      it('should allow @let declaration with the same name as a local reference defined in a parent view', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              <input #value>
+
+              @if (true) {
+                @let value = 1;
+                {{value}}
+              }
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should not allow a let declaration to be referenced before it is defined', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              {{value}}
+              @let value = 1;
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should not allow a let declaration to be referenced before it is defined inside a child view', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              <ng-template>
+                {{value}}
+                @let value = 1;
+              </ng-template>
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should not be able to access let declarations via `this`', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = 1;
+              {{this.value}}
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(`Property 'value' does not exist on type 'Main'.`);
+      });
+
+      it('should not allow a let declaration to refer to itself', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = value;
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should produce a single diagnostic if a @let declaration refers to properties on itself', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = value.a.b.c;
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should produce a single diagnostic if a @let declaration invokes itself', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = value();
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should allow event listeners to refer to a declaration before it has been defined', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              <button (click)="expectsString(value)">Click me</button>
+              @let value = 1;
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Argument of type 'number' is not assignable to parameter of type 'string'.`,
+        );
+      });
+
+      it('should allow child views to refer to a declaration before it has been defined', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @if (true) {
+                {{value}}
+              }
+
+              @let value = 1;
+            \`,
+            standalone: true,
+          })
+          export class Main {
+            expectsString(value: string) {}
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should not allow a let declaration value to be changed', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = 1;
+              <button (click)="value = 2">Click me</button>
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(`Cannot assign to @let declaration 'value'.`);
+      });
+
+      it('should not allow a let declaration value to be changed through a `this` access', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @let value = 1;
+              <button (click)="this.value = 2">Click me</button>
+            \`,
+            standalone: true,
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(`Property 'value' does not exist on type 'Main'.`);
+      });
+
+      it('should not be able to write to let declaration in a two-way binding', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive, Input, Output, EventEmitter} from '@angular/core';
+          @Directive({
+            selector: '[twoWayDir]',
+            standalone: true
+          })
+          export class TwoWayDir {
+            @Input() value: number = 0;
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
+          }
+          @Component({
+            template: \`
+              @let nonWritable = 1;
+              <button twoWayDir [(value)]="nonWritable"></button>
+            \`,
+            standalone: true,
+            imports: [TwoWayDir]
+          })
+          export class Main {
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.map((d) => ts.flattenDiagnosticMessageText(d.messageText, ''))).toEqual([
+          `Cannot use non-signal @let declaration 'nonWritable' in a two-way binding expression. @let declarations are read-only.`,
+        ]);
+      });
+
+      it('should allow two-way bindings to signal-based let declarations', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive, Input, Output, EventEmitter, signal} from '@angular/core';
+          @Directive({
+            selector: '[twoWayDir]',
+            standalone: true
+          })
+          export class TwoWayDir {
+            @Input() value: number = 0;
+            @Output() valueChange: EventEmitter<number> = new EventEmitter();
+          }
+          @Component({
+            template: \`
+              @let writable = signalValue;
+              <button twoWayDir [(value)]="writable"></button>
+            \`,
+            standalone: true,
+            imports: [TwoWayDir]
+          })
+          export class Main {
+            signalValue = signal(1);
+          }
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should report @let declaration used in the expression of a @if block before it is defined', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @if (value) {
+                Hello
+              }
+              @let value = 123;
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should report @let declaration used in the expression of a @for block before it is defined', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @for (current of value; track $index) {
+                {{current}}
+              }
+
+              @let value = [1, 2, 3];
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+
+      it('should report @let declaration used in the expression of a @switch block before it is defined', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+
+          @Component({
+            template: \`
+              @switch (value) {
+                @case (123) {
+                  Hello
+                }
+              }
+
+              @let value = [1, 2, 3];
+            \`,
+            standalone: true,
+          })
+          export class Main {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe(
+          `Cannot read @let declaration 'value' before it has been defined.`,
+        );
+      });
+    });
+
+    describe('unused standalone imports', () => {
+      it('should report when a directive is not used within a template', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[used]', standalone: true})
+            export class UsedDir {}
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[unused]', standalone: true})
+            export class UnusedDir {}
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedDir} from './used';
+          import {UnusedDir} from './unused';
+
+          @Component({
+            template: \`
+              <section>
+                <div></div>
+                <span used></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedDir, UnusedDir]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe('Imports array contains unused imports');
+        expect(diags[0].relatedInformation?.length).toBe(1);
+        expect(diags[0].relatedInformation![0].messageText).toBe(
+          'Directive "UnusedDir" is not used within the template',
+        );
+      });
+
+      it('should report when a pipe is not used within a template', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Pipe} from '@angular/core';
+
+            @Pipe({name: 'used', standalone: true})
+            export class UsedPipe {
+              transform(value: number) {
+                return value * 2;
+              }
+            }
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Pipe} from '@angular/core';
+
+            @Pipe({name: 'unused', standalone: true})
+            export class UnusedPipe {
+              transform(value: number) {
+                return value * 2;
+              }
+            }
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedPipe} from './used';
+          import {UnusedPipe} from './unused';
+
+          @Component({
+            template: \`
+              <section>
+                <div></div>
+                <span [attr.id]="1 | used"></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedPipe, UnusedPipe]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe('Imports array contains unused imports');
+        expect(diags[0].relatedInformation?.length).toBe(1);
+        expect(diags[0].relatedInformation?.[0].messageText).toBe(
+          'Pipe "UnusedPipe" is not used within the template',
+        );
+      });
+
+      it('should not report imports only used inside @defer blocks', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive, Pipe} from '@angular/core';
+
+          @Directive({selector: '[used]', standalone: true})
+          export class UsedDir {}
+
+          @Pipe({name: 'used', standalone: true})
+          export class UsedPipe {
+            transform(value: number) {
+              return value * 2;
+            }
+          }
+
+          @Component({
+            template: \`
+              <section>
+                @defer (on idle) {
+                  <div used></div>
+                  <span [attr.id]="1 | used"></span>
+                }
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedDir, UsedPipe]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should report when all imports in an import array are not used', () => {
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive, Pipe} from '@angular/core';
+
+          @Directive({selector: '[unused]', standalone: true})
+          export class UnusedDir {}
+
+          @Pipe({name: 'unused', standalone: true})
+          export class UnusedPipe {
+            transform(value: number) {
+              return value * 2;
+            }
+          }
+
+          @Component({
+            template: '',
+            standalone: true,
+            imports: [UnusedDir, UnusedPipe]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe('All imports are unused');
+        expect(diags[0].relatedInformation).toBeFalsy();
+      });
+
+      it('should not report unused imports coming from modules', () => {
+        env.write(
+          'module.ts',
+          `
+            import {Directive, NgModule} from '@angular/core';
+
+            @Directive({selector: '[unused-from-module]'})
+            export class UnusedDirFromModule {}
+
+            @NgModule({
+              declarations: [UnusedDirFromModule],
+              exports: [UnusedDirFromModule]
+            })
+            export class UnusedModule {}
+        `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UnusedModule} from './module';
+
+          @Component({
+            template: '',
+            standalone: true,
+            imports: [UnusedModule]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should be able to opt out for checking for unused imports via the tsconfig', () => {
+        env.tsconfig({
+          extendedDiagnostics: {
+            checks: {
+              unusedStandaloneImports: DiagnosticCategoryLabel.Suppress,
+            },
+          },
+        });
+
+        env.write(
+          'test.ts',
+          `
+          import {Component, Directive} from '@angular/core';
+
+          @Directive({selector: '[unused]', standalone: true})
+          export class UnusedDir {}
+
+          @Component({
+            template: '',
+            standalone: true,
+            imports: [UnusedDir]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should unused imports from external modules', () => {
+        // Note: we don't use the existing fake `@angular/common`,
+        // because all the declarations there are non-standalone.
+        env.write(
+          'node_modules/fake-common/index.d.ts',
+          `
+          import * as i0 from '@angular/core';
+
+          export declare class NgIf {
+            static ɵdir: i0.ɵɵDirectiveDeclaration<NgIf<any, any>, "[ngIf]", never, {}, {}, never, never, true, never>;
+            static ɵfac: i0.ɵɵFactoryDeclaration<NgIf<any, any>, never>;
+          }
+
+          export declare class NgFor {
+            static ɵdir: i0.ɵɵDirectiveDeclaration<NgFor<any, any>, "[ngFor]", never, {}, {}, never, never, true, never>;
+            static ɵfac: i0.ɵɵFactoryDeclaration<NgFor<any, any>, never>;
+          }
+
+          export class PercentPipe {
+            static ɵfac: i0.ɵɵFactoryDeclaration<PercentPipe, never>;
+            static ɵpipe: i0.ɵɵPipeDeclaration<PercentPipe, "percent", true>;
+          }
+        `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {NgIf, NgFor, PercentPipe} from 'fake-common';
+
+          @Component({
+            template: \`
+              <section>
+                <div></div>
+                <span *ngIf="true"></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [NgFor, NgIf, PercentPipe]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe('Imports array contains unused imports');
+        expect(diags[0].relatedInformation?.length).toBe(2);
+        expect(diags[0].relatedInformation![0].messageText).toBe(
+          'Directive "NgFor" is not used within the template',
+        );
+        expect(diags[0].relatedInformation![1].messageText).toBe(
+          'Pipe "PercentPipe" is not used within the template',
+        );
+      });
+
+      it('should report unused imports coming from a nested array from the same file', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[used]', standalone: true})
+            export class UsedDir {}
+          `,
+        );
+
+        env.write(
+          'other-used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[other-used]', standalone: true})
+            export class OtherUsedDir {}
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[unused]', standalone: true})
+            export class UnusedDir {}
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedDir} from './used';
+          import {OtherUsedDir} from './other-used';
+          import {UnusedDir} from './unused';
+
+          const COMMON = [OtherUsedDir, UnusedDir];
+
+          @Component({
+            template: \`
+              <section>
+                <div other-used></div>
+                <span used></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedDir, COMMON]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe('Imports array contains unused imports');
+        expect(diags[0].relatedInformation?.length).toBe(1);
+        expect(diags[0].relatedInformation![0].messageText).toBe(
+          'Directive "UnusedDir" is not used within the template',
+        );
+      });
+
+      it('should report unused imports coming from an array used as the `imports` initializer', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[used]', standalone: true})
+            export class UsedDir {}
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[unused]', standalone: true})
+            export class UnusedDir {}
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedDir} from './used';
+          import {UnusedDir} from './unused';
+
+          const IMPORTS = [UsedDir, UnusedDir];
+
+          @Component({
+            template: \`
+              <section>
+                <div></div>
+                <span used></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: IMPORTS
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(1);
+        expect(diags[0].messageText).toBe('Imports array contains unused imports');
+        expect(diags[0].relatedInformation?.length).toBe(1);
+        expect(diags[0].relatedInformation![0].messageText).toBe(
+          'Directive "UnusedDir" is not used within the template',
+        );
+      });
+
+      it('should not report unused imports coming from an array through a spread expression from a different file', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[used]', standalone: true})
+            export class UsedDir {}
+          `,
+        );
+
+        env.write(
+          'other-used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[other-used]', standalone: true})
+            export class OtherUsedDir {}
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[unused]', standalone: true})
+            export class UnusedDir {}
+          `,
+        );
+
+        env.write(
+          'common.ts',
+          `
+            import {OtherUsedDir} from './other-used';
+            import {UnusedDir} from './unused';
+
+            export const COMMON = [OtherUsedDir, UnusedDir];
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedDir} from './used';
+          import {COMMON} from './common';
+
+          @Component({
+            template: \`
+              <section>
+                <div other-used></div>
+                <span used></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedDir, ...COMMON]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should not report unused imports coming from a nested array from a different file', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[used]', standalone: true})
+            export class UsedDir {}
+          `,
+        );
+
+        env.write(
+          'other-used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[other-used]', standalone: true})
+            export class OtherUsedDir {}
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[unused]', standalone: true})
+            export class UnusedDir {}
+          `,
+        );
+
+        env.write(
+          'common.ts',
+          `
+            import {OtherUsedDir} from './other-used';
+            import {UnusedDir} from './unused';
+
+            export const COMMON = [OtherUsedDir, UnusedDir];
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedDir} from './used';
+          import {COMMON} from './common';
+
+          @Component({
+            template: \`
+              <section>
+                <div other-used></div>
+                <span used></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedDir, COMMON]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
+      });
+
+      it('should not report unused imports coming from an exported array in the same file', () => {
+        env.write(
+          'used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[used]', standalone: true})
+            export class UsedDir {}
+          `,
+        );
+
+        env.write(
+          'other-used.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[other-used]', standalone: true})
+            export class OtherUsedDir {}
+          `,
+        );
+
+        env.write(
+          'unused.ts',
+          `
+            import {Directive} from '@angular/core';
+
+            @Directive({selector: '[unused]', standalone: true})
+            export class UnusedDir {}
+          `,
+        );
+
+        env.write(
+          'test.ts',
+          `
+          import {Component} from '@angular/core';
+          import {UsedDir} from './used';
+          import {OtherUsedDir} from './other-used';
+          import {UnusedDir} from './unused';
+
+          export const COMMON = [OtherUsedDir, UnusedDir];
+
+          @Component({
+            template: \`
+              <section>
+                <div other-used></div>
+                <span used></span>
+              </section>
+            \`,
+            standalone: true,
+            imports: [UsedDir, COMMON]
+          })
+          export class MyComp {}
+        `,
+        );
+
+        const diags = env.driveDiagnostics();
+        expect(diags.length).toBe(0);
       });
     });
   });

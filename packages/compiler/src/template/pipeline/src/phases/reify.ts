@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import * as o from '../../../../output/output_ast';
@@ -184,6 +184,9 @@ function reifyCreateOperations(unit: CompilationUnit, ops: ir.OpList<ir.CreateOp
       case ir.OpKind.Pipe:
         ir.OpList.replace(op, ng.pipe(op.handle.slot!, op.name));
         break;
+      case ir.OpKind.DeclareLet:
+        ir.OpList.replace(op, ng.declareLet(op.handle.slot!, op.sourceSpan));
+        break;
       case ir.OpKind.Listener:
         const listenerFn = reifyListenerHandler(
           unit,
@@ -266,6 +269,7 @@ function reifyCreateOperations(unit: CompilationUnit, ops: ir.OpList<ir.CreateOp
       case ir.OpKind.DeferOn:
         let args: number[] = [];
         switch (op.trigger.kind) {
+          case ir.DeferTriggerKind.Never:
           case ir.DeferTriggerKind.Idle:
           case ir.DeferTriggerKind.Immediate:
             break;
@@ -275,14 +279,19 @@ function reifyCreateOperations(unit: CompilationUnit, ops: ir.OpList<ir.CreateOp
           case ir.DeferTriggerKind.Interaction:
           case ir.DeferTriggerKind.Hover:
           case ir.DeferTriggerKind.Viewport:
-            if (op.trigger.targetSlot?.slot == null || op.trigger.targetSlotViewSteps === null) {
-              throw new Error(
-                `Slot or view steps not set in trigger reification for trigger kind ${op.trigger.kind}`,
-              );
-            }
-            args = [op.trigger.targetSlot.slot];
-            if (op.trigger.targetSlotViewSteps !== 0) {
-              args.push(op.trigger.targetSlotViewSteps);
+            // `hydrate` triggers don't support targets.
+            if (op.modifier === ir.DeferOpModifierKind.HYDRATE) {
+              args = [];
+            } else {
+              if (op.trigger.targetSlot?.slot == null || op.trigger.targetSlotViewSteps === null) {
+                throw new Error(
+                  `Slot or view steps not set in trigger reification for trigger kind ${op.trigger.kind}`,
+                );
+              }
+              args = [op.trigger.targetSlot.slot];
+              if (op.trigger.targetSlotViewSteps !== 0) {
+                args.push(op.trigger.targetSlotViewSteps);
+              }
             }
             break;
           default:
@@ -292,7 +301,7 @@ function reifyCreateOperations(unit: CompilationUnit, ops: ir.OpList<ir.CreateOp
               }`,
             );
         }
-        ir.OpList.replace(op, ng.deferOn(op.trigger.kind, args, op.prefetch, op.sourceSpan));
+        ir.OpList.replace(op, ng.deferOn(op.trigger.kind, args, op.modifier, op.sourceSpan));
         break;
       case ir.OpKind.ProjectionDef:
         ir.OpList.replace<ir.CreateOp>(op, ng.projectionDef(op.def));
@@ -535,8 +544,10 @@ function reifyUpdateOperations(_unit: CompilationUnit, ops: ir.OpList<ir.UpdateO
         ir.OpList.replace(op, ng.repeater(op.collection, op.sourceSpan));
         break;
       case ir.OpKind.DeferWhen:
-        ir.OpList.replace(op, ng.deferWhen(op.prefetch, op.expr, op.sourceSpan));
+        ir.OpList.replace(op, ng.deferWhen(op.modifier, op.expr, op.sourceSpan));
         break;
+      case ir.OpKind.StoreLet:
+        throw new Error(`AssertionError: unexpected storeLet ${op.declaredName}`);
       case ir.OpKind.Statement:
         // Pass statement operations directly through.
         break;
@@ -599,6 +610,10 @@ function reifyIrExpression(expr: o.Expression): o.Expression {
       return ng.pipeBindV(expr.targetSlot.slot!, expr.varOffset!, expr.args);
     case ir.ExpressionKind.SlotLiteralExpr:
       return o.literal(expr.slot.slot!);
+    case ir.ExpressionKind.ContextLetReference:
+      return ng.readContextLet(expr.targetSlot.slot!);
+    case ir.ExpressionKind.StoreLet:
+      return ng.storeLet(expr.value, expr.sourceSpan);
     default:
       throw new Error(
         `AssertionError: Unsupported reification of ir.Expression kind: ${

@@ -18,7 +18,7 @@ Route parameters enable you to include dynamic information as a part of your rou
 
 <docs-workflow>
 
-<docs-step title="Create a new service for your app">
+<docs-step title="Using `routerLink` for dynamic navigation">
 In lesson 10, you added a second route to `src/app/routes.ts` which includes a special segment that identifies the route parameter, `id`:
 
 <docs-code language="javascript">
@@ -129,5 +129,5 @@ For more information about the topics covered in this lesson, visit:
   <docs-pill href="guide/routing/common-router-tasks#accessing-query-parameters-and-fragments" title="Route Parameters"/>
   <docs-pill href="guide/routing" title="Routing in Angular Overview"/>
   <docs-pill href="guide/routing/common-router-tasks" title="Common Routing Tasks"/>
-  <docs-pill href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining" title="Optional Chaining Operator"/>
+  <docs-pill href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Operators/Optional_chaining" title="Optional Chaining Operator"/>
 </docs-pill-row>

@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 import {
   AST,
@@ -14,6 +14,7 @@ import {
   SafePropertyRead,
   TmplAstBoundAttribute,
   TmplAstBoundEvent,
+  TmplAstLetDeclaration,
   TmplAstNode,
   TmplAstReference,
   TmplAstTextAttribute,
@@ -36,7 +37,7 @@ import {
 import ts from 'typescript';
 
 import {getTargetAtPosition, TargetNodeKind} from './template_target';
-import {findTightestNode, getParentClassDeclaration} from './ts_utils';
+import {findTightestNode, getParentClassDeclaration} from './utils/ts_utils';
 import {
   getDirectiveMatchesForAttribute,
   getDirectiveMatchesForElementTag,
@@ -180,6 +181,20 @@ export function getTargetDetailsAtTemplatePosition(
         }
         break;
       }
+      case SymbolKind.LetDeclaration:
+        // If the templateNode isn't on a let declaration, it has to be on a usage of it
+        // somewhere in the template. Otherwise only pick up when it's within the name.
+        if (
+          !(templateTarget instanceof TmplAstLetDeclaration) ||
+          isWithin(position, templateTarget.nameSpan)
+        ) {
+          details.push({
+            typescriptLocations: [toFilePosition(symbol.localVarLocation)],
+            templateTarget,
+            symbol,
+          });
+        }
+        break;
       case SymbolKind.Input:
       case SymbolKind.Output: {
         details.push({
@@ -317,10 +332,9 @@ export function getRenameTextAndSpanAtPosition(
     node instanceof TmplAstTextAttribute ||
     node instanceof TmplAstBoundEvent
   ) {
-    if (node.keySpan === undefined) {
-      return null;
-    }
-    return {text: node.name, span: toTextSpan(node.keySpan)};
+    return node.keySpan === undefined ? null : {text: node.name, span: toTextSpan(node.keySpan)};
+  } else if (node instanceof TmplAstLetDeclaration && isWithin(position, node.nameSpan)) {
+    return {text: node.nameSpan.toString(), span: toTextSpan(node.nameSpan)};
   } else if (node instanceof TmplAstVariable || node instanceof TmplAstReference) {
     if (isWithin(position, node.keySpan)) {
       return {text: node.keySpan.toString(), span: toTextSpan(node.keySpan)};

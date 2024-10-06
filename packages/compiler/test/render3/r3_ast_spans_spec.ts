@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {ParseSourceSpan} from '../../src/parse_util';
@@ -206,6 +206,8 @@ class R3AstSourceSpans implements t.Visitor<void> {
       name = 'InteractionDeferredTrigger';
     } else if (trigger instanceof t.ViewportDeferredTrigger) {
       name = 'ViewportDeferredTrigger';
+    } else if (trigger instanceof t.NeverDeferredTrigger) {
+      name = 'NeverDeferredTrigger';
     } else {
       throw new Error('Unknown trigger');
     }
@@ -268,8 +270,8 @@ function humanizeSpan(span: ParseSourceSpan | null | undefined): string {
   return span.toString();
 }
 
-function expectFromHtml(html: string, options?: {tokenizeLet?: boolean}) {
-  return expectFromR3Nodes(parse(html, options).nodes);
+function expectFromHtml(html: string) {
+  return expectFromR3Nodes(parse(html).nodes);
 }
 
 function expectFromR3Nodes(nodes: t.Node[]) {
@@ -687,7 +689,7 @@ describe('R3 AST source spans', () => {
       const html =
         '@defer (when isVisible() && foo; on hover(button), timer(10s), idle, immediate, ' +
         'interaction(button), viewport(container); prefetch on immediate; ' +
-        'prefetch when isDataLoaded()) {<calendar-cmp [date]="current"/>}' +
+        'prefetch when isDataLoaded(); hydrate on interaction; hydrate when isVisible(); hydrate on timer(1200)) {<calendar-cmp [date]="current"/>}' +
         '@loading (minimum 1s; after 100ms) {Loading...}' +
         '@placeholder (minimum 500) {Placeholder content!}' +
         '@error {Loading failed :(}';
@@ -695,10 +697,13 @@ describe('R3 AST source spans', () => {
       expectFromHtml(html).toEqual([
         [
           'DeferredBlock',
-          '@defer (when isVisible() && foo; on hover(button), timer(10s), idle, immediate, interaction(button), viewport(container); prefetch on immediate; prefetch when isDataLoaded()) {<calendar-cmp [date]="current"/>}@loading (minimum 1s; after 100ms) {Loading...}@placeholder (minimum 500) {Placeholder content!}@error {Loading failed :(}',
-          '@defer (when isVisible() && foo; on hover(button), timer(10s), idle, immediate, interaction(button), viewport(container); prefetch on immediate; prefetch when isDataLoaded()) {',
+          '@defer (when isVisible() && foo; on hover(button), timer(10s), idle, immediate, interaction(button), viewport(container); prefetch on immediate; prefetch when isDataLoaded(); hydrate on interaction; hydrate when isVisible(); hydrate on timer(1200)) {<calendar-cmp [date]="current"/>}@loading (minimum 1s; after 100ms) {Loading...}@placeholder (minimum 500) {Placeholder content!}@error {Loading failed :(}',
+          '@defer (when isVisible() && foo; on hover(button), timer(10s), idle, immediate, interaction(button), viewport(container); prefetch on immediate; prefetch when isDataLoaded(); hydrate on interaction; hydrate when isVisible(); hydrate on timer(1200)) {',
           '}',
         ],
+        ['InteractionDeferredTrigger', 'hydrate on interaction'],
+        ['BoundDeferredTrigger', 'hydrate when isVisible()'],
+        ['TimerDeferredTrigger', 'hydrate on timer(1200)'],
         ['BoundDeferredTrigger', 'when isVisible() && foo'],
         ['HoverDeferredTrigger', 'on hover(button)'],
         ['TimerDeferredTrigger', 'timer(10s)'],
@@ -829,7 +834,7 @@ describe('R3 AST source spans', () => {
 
   describe('@let declaration', () => {
     it('is correct for a let declaration', () => {
-      expectFromHtml('@let foo = 123;', {tokenizeLet: true}).toEqual([
+      expectFromHtml('@let foo = 123;').toEqual([
         ['LetDeclaration', '@let foo = 123', 'foo', '123'],
       ]);
     });

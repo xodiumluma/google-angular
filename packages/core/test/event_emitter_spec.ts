@@ -3,12 +3,14 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
-import {filter} from 'rxjs/operators';
+import {TestBed} from '@angular/core/testing';
+import {filter, tap} from 'rxjs/operators';
 
 import {EventEmitter} from '../src/event_emitter';
+import {ApplicationRef} from '../public_api';
 
 describe('EventEmitter', () => {
   let emitter: EventEmitter<number>;
@@ -188,6 +190,20 @@ describe('EventEmitter', () => {
 
     expect(errorPropagated).toBe(true);
     expect(emitter.observers.length).toBe(0);
+  });
+
+  it('contributes to app stability', async () => {
+    const emitter = TestBed.runInInjectionContext(() => new EventEmitter<number>(true));
+    let emitValue: number;
+    emitter.subscribe({
+      next: (v: number) => {
+        emitValue = v;
+      },
+    });
+    emitter.emit(1);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(emitValue!).toBeDefined();
+    expect(emitValue!).toEqual(1);
   });
 
   // TODO: vsavkin: add tests cases

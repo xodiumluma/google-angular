@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {initMockFileSystem} from '@angular/compiler-cli/src/ngtsc/file_system/testing';
@@ -272,10 +272,7 @@ describe('code fixes', () => {
       const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
       actionChangesMatch(actionChanges, `Import BarComponent from './bar' on FooComponent`, [
         [``, `import { BarComponent } from "./bar";`],
-        [
-          `{`,
-          `{ selector: 'foo', template: '<bar></bar>', standalone: true, imports: [BarComponent] }`,
-        ],
+        [``, `, imports: [BarComponent]`],
       ]);
     });
 
@@ -317,10 +314,7 @@ describe('code fixes', () => {
       const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
       actionChangesMatch(actionChanges, `Import BarModule from './bar' on FooComponent`, [
         [``, `import { BarModule } from "./bar";`],
-        [
-          `{`,
-          `{ selector: 'foo', template: '<bar></bar>', standalone: true, imports: [BarModule] }`,
-        ],
+        [``, `, imports: [BarModule]`],
       ]);
     });
 
@@ -362,7 +356,7 @@ describe('code fixes', () => {
       const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
       actionChangesMatch(actionChanges, `Import BarComponent from './bar' on FooModule`, [
         [``, `import { BarComponent } from "./bar";`],
-        [`{`, `{ declarations: [FooComponent], exports: [], imports: [BarComponent] }`],
+        [`imp`, `imports: [BarComponent]`],
       ]);
     });
 
@@ -403,10 +397,7 @@ describe('code fixes', () => {
 
       actionChangesMatch(actionChanges, `Import BarPipe from './bar' on FooComponent`, [
         [``, `import { BarPipe } from "./bar";`],
-        [
-          '{',
-          `{ selector: 'foo', template: '{{"hello"|bar}}', standalone: true, imports: [BarPipe] }`,
-        ],
+        ['', `, imports: [BarPipe]`],
       ]);
     });
 
@@ -454,18 +445,221 @@ describe('code fixes', () => {
       const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
       actionChangesMatch(actionChanges, `Import BarModule from './bar' on FooComponent`, [
         [``, `import { BarModule } from "./bar";`],
-        [
-          `{`,
-          `{ selector: 'foo', template: '<bar></bar>', standalone: true, imports: [BarModule] }`,
-        ],
+        [``, `, imports: [BarModule]`],
       ]);
       actionChangesMatch(actionChanges, `Import Bar2Module from './bar' on FooComponent`, [
         [``, `import { Bar2Module } from "./bar";`],
-        [
-          `{`,
-          `{ selector: 'foo', template: '<bar></bar>', standalone: true, imports: [Bar2Module] }`,
-        ],
+        [``, `, imports: [Bar2Module]`],
       ]);
+    });
+
+    it('for a default exported component', () => {
+      const standaloneFiles = {
+        'foo.ts': `
+         import {Component} from '@angular/core';
+         @Component({
+           selector: 'foo',
+           template: '<bar></bar>',
+           standalone: true
+         })
+         export class FooComponent {}
+         `,
+        'bar.ts': `
+         import {Component} from '@angular/core';
+         @Component({
+           selector: 'bar',
+           template: '<div>bar</div>',
+           standalone: true
+         })
+         class BarComponent {}
+         export default BarComponent;
+         `,
+      };
+
+      const project = createModuleAndProjectWithDeclarations(env, 'test', {}, {}, standaloneFiles);
+      const diags = project.getDiagnosticsForFile('foo.ts');
+      const fixFile = project.openFile('foo.ts');
+      fixFile.moveCursorToText('<¦bar>');
+
+      const codeActions = project.getCodeFixesAtPosition('foo.ts', fixFile.cursor, fixFile.cursor, [
+        diags[0].code,
+      ]);
+      const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
+      actionChangesMatch(actionChanges, `Import BarComponent from './bar' on FooComponent`, [
+        [``, `import BarComponent from "./bar";`],
+        [``, `, imports: [BarComponent]`],
+      ]);
+    });
+
+    it('for a default exported component and reuse the existing import declarations', () => {
+      const standaloneFiles = {
+        'foo.ts': `
+         import {Component} from '@angular/core';
+         import {test} from './bar';
+         @Component({
+           selector: 'foo',
+           template: '<bar></bar>',
+           standalone: true
+         })
+         export class FooComponent {}
+         `,
+        'bar.ts': `
+         import {Component} from '@angular/core';
+         @Component({
+           selector: 'bar',
+           template: '<div>bar</div>',
+           standalone: true
+         })
+         class BarComponent {}
+         export default BarComponent;
+         export const test = 1;
+         `,
+      };
+
+      const project = createModuleAndProjectWithDeclarations(env, 'test', {}, {}, standaloneFiles);
+      const diags = project.getDiagnosticsForFile('foo.ts');
+      const fixFile = project.openFile('foo.ts');
+      fixFile.moveCursorToText('<¦bar>');
+
+      const codeActions = project.getCodeFixesAtPosition('foo.ts', fixFile.cursor, fixFile.cursor, [
+        diags[0].code,
+      ]);
+      const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
+      actionChangesMatch(actionChanges, `Import BarComponent from './bar' on FooComponent`, [
+        [`{te`, `BarComponent, { test }`],
+        [``, `, imports: [BarComponent]`],
+      ]);
+    });
+
+    it('for a default exported component and reuse the existing imported component name', () => {
+      const standaloneFiles = {
+        'foo.ts': `
+         import {Component} from '@angular/core';
+         import NewBarComponent, {test} from './bar';
+         @Component({
+           selector: 'foo',
+           template: '<bar></bar>',
+           standalone: true
+         })
+         export class FooComponent {}
+         `,
+        'bar.ts': `
+         import {Component} from '@angular/core';
+         @Component({
+           selector: 'bar',
+           template: '<div>bar</div>',
+           standalone: true
+         })
+         class BarComponent {}
+         export default BarComponent;
+         export const test = 1;
+         `,
+      };
+
+      const project = createModuleAndProjectWithDeclarations(env, 'test', {}, {}, standaloneFiles);
+      const diags = project.getDiagnosticsForFile('foo.ts');
+      const fixFile = project.openFile('foo.ts');
+      fixFile.moveCursorToText('<¦bar>');
+
+      const codeActions = project.getCodeFixesAtPosition('foo.ts', fixFile.cursor, fixFile.cursor, [
+        diags[0].code,
+      ]);
+      const actionChanges = allChangesForCodeActions(fixFile.contents, codeActions);
+      actionChangesMatch(actionChanges, `Import NewBarComponent from './bar' on FooComponent`, [
+        [``, `, imports: [NewBarComponent]`],
+      ]);
+    });
+  });
+
+  describe('unused standalone imports', () => {
+    it('should fix imports array where some imports are not used', () => {
+      const files = {
+        'app.ts': `
+         import {Component, Directive, Pipe} from '@angular/core';
+
+         @Directive({selector: '[used]', standalone: true})
+         export class UsedDirective {}
+
+         @Directive({selector: '[unused]', standalone: true})
+         export class UnusedDirective {}
+
+         @Pipe({name: 'unused', standalone: true})
+         export class UnusedPipe {}
+
+         @Component({
+          selector: 'used-cmp',
+          standalone: true,
+          template: '',
+         })
+         export class UsedComponent {}
+
+         @Component({
+           template: \`
+            <section>
+              <div></div>
+              <span used></span>
+              <div>
+                <used-cmp/>
+              </div>
+            </section>
+           \`,
+           standalone: true,
+           imports: [UnusedDirective, UsedDirective, UnusedPipe, UsedComponent],
+         })
+         export class AppComponent {}
+       `,
+      };
+
+      const project = createModuleAndProjectWithDeclarations(env, 'test', files);
+      const appFile = project.openFile('app.ts');
+
+      const fixesAllActions = project.getCombinedCodeFix(
+        'app.ts',
+        FixIdForCodeFixesAll.FIX_UNUSED_STANDALONE_IMPORTS,
+      );
+      expectIncludeReplacementTextForFileTextChange({
+        fileTextChanges: fixesAllActions.changes,
+        content: appFile.contents,
+        text: '[UnusedDirective, UsedDirective, UnusedPipe, UsedComponent]',
+        newText: '[UsedDirective, UsedComponent]',
+        fileName: 'app.ts',
+      });
+    });
+
+    it('should fix imports array where all imports are not used', () => {
+      const files = {
+        'app.ts': `
+         import {Component, Directive, Pipe} from '@angular/core';
+
+         @Directive({selector: '[unused]', standalone: true})
+         export class UnusedDirective {}
+
+         @Pipe({name: 'unused', standalone: true})
+         export class UnusedPipe {}
+
+         @Component({
+           template: '',
+           standalone: true,
+           imports: [UnusedDirective, UnusedPipe],
+         })
+         export class AppComponent {}
+       `,
+      };
+
+      const project = createModuleAndProjectWithDeclarations(env, 'test', files);
+      const appFile = project.openFile('app.ts');
+
+      const fixesAllActions = project.getCombinedCodeFix(
+        'app.ts',
+        FixIdForCodeFixesAll.FIX_UNUSED_STANDALONE_IMPORTS,
+      );
+      expectIncludeReplacementTextForFileTextChange({
+        fileTextChanges: fixesAllActions.changes,
+        content: appFile.contents,
+        text: '[UnusedDirective, UnusedPipe]',
+        newText: '[]',
+        fileName: 'app.ts',
+      });
     });
   });
 });

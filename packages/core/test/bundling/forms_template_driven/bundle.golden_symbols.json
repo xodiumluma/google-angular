@@ -27,7 +27,10 @@
     "name": "AbstractValidatorDirective"
   },
   {
-    "name": "AfterRenderEventManager"
+    "name": "AfterRenderManager"
+  },
+  {
+    "name": "AfterRenderPhase"
   },
   {
     "name": "AnonymousSubject"
@@ -88,6 +91,12 @@
   },
   {
     "name": "COMPOSITION_BUFFER_MODE"
+  },
+  {
+    "name": "COMPUTED_NODE"
+  },
+  {
+    "name": "COMPUTING"
   },
   {
     "name": "CONTAINER_HEADER_OFFSET"
@@ -201,7 +210,13 @@
     "name": "ENVIRONMENT_INITIALIZER"
   },
   {
+    "name": "ERRORED"
+  },
+  {
     "name": "EVENT_MANAGER_PLUGINS"
+  },
+  {
+    "name": "EffectScheduler"
   },
   {
     "name": "ElementRef"
@@ -456,7 +471,7 @@
     "name": "PRESERVE_HOST_CONTENT"
   },
   {
-    "name": "PendingTasks"
+    "name": "PendingTasksInternal"
   },
   {
     "name": "PlatformRef"
@@ -475,6 +490,9 @@
   },
   {
     "name": "REACTIVE_LVIEW_CONSUMER_NODE"
+  },
+  {
+    "name": "REACTIVE_NODE"
   },
   {
     "name": "REMOVE_STYLES_ON_COMPONENT_DESTROY"
@@ -501,7 +519,13 @@
     "name": "RuntimeError"
   },
   {
+    "name": "SCHEDULE_IN_ROOT_ZONE"
+  },
+  {
     "name": "SIGNAL"
+  },
+  {
+    "name": "SIGNAL_NODE"
   },
   {
     "name": "SIMPLE_CHANGES_STORE"
@@ -540,6 +564,9 @@
     "name": "Subscription"
   },
   {
+    "name": "TEMPORARY_CONSUMER_NODE"
+  },
+  {
     "name": "TESTABILITY"
   },
   {
@@ -576,6 +603,9 @@
     "name": "TouchedChangeEvent"
   },
   {
+    "name": "UNSET"
+  },
+  {
     "name": "USE_VALUE"
   },
   {
@@ -606,7 +636,13 @@
     "name": "ZONELESS_SCHEDULER_DISABLED"
   },
   {
+    "name": "ZoneAwareEffectScheduler"
+  },
+  {
     "name": "ZoneStablePendingTask"
+  },
+  {
+    "name": "_AfterRenderImpl"
   },
   {
     "name": "_ComponentFactoryResolver"
@@ -693,9 +729,6 @@
     "name": "_wasLastNodeCreated"
   },
   {
-    "name": "_wrapInTimeout"
-  },
-  {
     "name": "activeConsumer"
   },
   {
@@ -705,7 +738,7 @@
     "name": "addToArray"
   },
   {
-    "name": "addToViewTree"
+    "name": "addToEndOfViewTree"
   },
   {
     "name": "addValidators"
@@ -715,6 +748,9 @@
   },
   {
     "name": "allocLFrame"
+  },
+  {
+    "name": "angularZoneInstanceIdProperty"
   },
   {
     "name": "appendChild"
@@ -744,6 +780,12 @@
     "name": "assertConsumerNode"
   },
   {
+    "name": "assertNotDestroyed"
+  },
+  {
+    "name": "assertProducerNode"
+  },
+  {
     "name": "attachInjectFlag"
   },
   {
@@ -763,6 +805,9 @@
   },
   {
     "name": "booleanAttribute"
+  },
+  {
+    "name": "bootstrap"
   },
   {
     "name": "callHook"
@@ -807,6 +852,9 @@
     "name": "computeStaticStyling"
   },
   {
+    "name": "computed"
+  },
+  {
     "name": "concatStringsWithSpace"
   },
   {
@@ -816,7 +864,19 @@
     "name": "configureViewWithDirective"
   },
   {
+    "name": "consumerAfterComputation"
+  },
+  {
+    "name": "consumerBeforeComputation"
+  },
+  {
+    "name": "consumerDestroy"
+  },
+  {
     "name": "consumerIsLive"
+  },
+  {
+    "name": "consumerMarkDirty"
   },
   {
     "name": "consumerPollProducersForChange"
@@ -861,6 +921,9 @@
     "name": "createLView"
   },
   {
+    "name": "createLinkElement"
+  },
+  {
     "name": "createNodeInjector"
   },
   {
@@ -873,7 +936,13 @@
     "name": "createOperatorSubscriber"
   },
   {
+    "name": "createPlatform"
+  },
+  {
     "name": "createPlatformFactory"
+  },
+  {
+    "name": "createStyleElement"
   },
   {
     "name": "createTView"
@@ -883,6 +952,9 @@
   },
   {
     "name": "deepForEachProvider"
+  },
+  {
+    "name": "defaultEquals"
   },
   {
     "name": "defaultIterableDiffersFactory"
@@ -922,9 +994,6 @@
   },
   {
     "name": "diPublicInInjector"
-  },
-  {
-    "name": "disableEventReplayFn"
   },
   {
     "name": "elementPropertyInternal"
@@ -1048,6 +1117,9 @@
   },
   {
     "name": "getFirstNativeNode"
+  },
+  {
+    "name": "getInitialLViewFlagsFromDef"
   },
   {
     "name": "getInjectImplementation"
@@ -1197,6 +1269,9 @@
     "name": "importProvidersFrom"
   },
   {
+    "name": "inNotificationPhase"
+  },
+  {
     "name": "includeViewProviders"
   },
   {
@@ -1272,6 +1347,12 @@
     "name": "invokeHostBindingsInCreationMode"
   },
   {
+    "name": "isAngularZoneProperty"
+  },
+  {
+    "name": "isApplicationBootstrapConfig"
+  },
+  {
     "name": "isArrayLike"
   },
   {
@@ -1282,6 +1363,9 @@
   },
   {
     "name": "isComponentHost"
+  },
+  {
+    "name": "isConsumerNode"
   },
   {
     "name": "isContentQueryHost"
@@ -1440,6 +1524,9 @@
     "name": "markViewForRefresh"
   },
   {
+    "name": "markedFeatures"
+  },
+  {
     "name": "maybeUnwrapEmpty"
   },
   {
@@ -1497,7 +1584,7 @@
     "name": "ngOnChangesSetInput"
   },
   {
-    "name": "ngZoneApplicationErrorHandlerFactory"
+    "name": "ngZoneInstanceId"
   },
   {
     "name": "noSideEffects"
@@ -1539,6 +1626,9 @@
     "name": "parseAndConvertBindingsForDefinition"
   },
   {
+    "name": "performanceMarkFeature"
+  },
+  {
     "name": "pickAsyncValidators"
   },
   {
@@ -1551,13 +1641,28 @@
     "name": "platformCore"
   },
   {
+    "name": "postSignalSetFn"
+  },
+  {
     "name": "processInjectorTypesWithProviders"
+  },
+  {
+    "name": "producerAccessed"
+  },
+  {
+    "name": "producerAddLiveConsumer"
+  },
+  {
+    "name": "producerNotifyConsumers"
   },
   {
     "name": "producerRemoveLiveConsumerAtIndex"
   },
   {
     "name": "producerUpdateValueVersion"
+  },
+  {
+    "name": "producerUpdatesAllowed"
   },
   {
     "name": "profiler"
@@ -1588,6 +1693,9 @@
   },
   {
     "name": "remove"
+  },
+  {
+    "name": "removeElements"
   },
   {
     "name": "removeFromArray"
@@ -1636,6 +1744,9 @@
   },
   {
     "name": "retrieveHydrationInfo"
+  },
+  {
+    "name": "runEffectsInView"
   },
   {
     "name": "saveNameToExportMap"
@@ -1728,6 +1839,18 @@
     "name": "shouldSearchParent"
   },
   {
+    "name": "signal"
+  },
+  {
+    "name": "signalAsReadonlyFn"
+  },
+  {
+    "name": "signalSetFn"
+  },
+  {
+    "name": "stashEventListener"
+  },
+  {
     "name": "storeLViewOnDestroy"
   },
   {
@@ -1735,6 +1858,12 @@
   },
   {
     "name": "stringifyCSSSelector"
+  },
+  {
+    "name": "throwInvalidWriteToSignalError"
+  },
+  {
+    "name": "throwInvalidWriteToSignalErrorFn"
   },
   {
     "name": "throwProviderNotFoundError"
@@ -1761,6 +1890,12 @@
     "name": "uniqueIdCounter"
   },
   {
+    "name": "unregisterLView"
+  },
+  {
+    "name": "untracked"
+  },
+  {
     "name": "unwrapRNode"
   },
   {
@@ -1774,6 +1909,9 @@
   },
   {
     "name": "viewAttachedToChangeDetector"
+  },
+  {
+    "name": "viewShouldHaveReactiveConsumer"
   },
   {
     "name": "walkProviderTree"

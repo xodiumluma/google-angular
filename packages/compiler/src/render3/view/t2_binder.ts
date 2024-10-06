@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {
@@ -14,8 +14,9 @@ import {
   PropertyWrite,
   RecursiveAstVisitor,
   SafePropertyRead,
+  ThisReceiver,
 } from '../../expression_parser/ast';
-import {SelectorMatcher} from '../../selector';
+import {CssSelector, SelectorMatcher} from '../../selector';
 import {
   BoundAttribute,
   BoundEvent,
@@ -56,8 +57,75 @@ import {
   ScopedNode,
   Target,
   TargetBinder,
+  TemplateEntity,
 } from './t2_api';
+import {parseTemplate} from './template';
 import {createCssSelectorFromNode} from './util';
+
+/**
+ * Computes a difference between full list (first argument) and
+ * list of items that should be excluded from the full list (second
+ * argument).
+ */
+function diff(fullList: string[], itemsToExclude: string[]): string[] {
+  const exclude = new Set(itemsToExclude);
+  return fullList.filter((item) => !exclude.has(item));
+}
+
+/**
+ * Given a template string and a set of available directive selectors,
+ * computes a list of matching selectors and splits them into 2 buckets:
+ * (1) eagerly used in a template and (2) directives used only in defer
+ * blocks. Similarly, returns 2 lists of pipes (eager and deferrable).
+ *
+ * Note: deferrable directives selectors and pipes names used in `@defer`
+ * blocks are **candidates** and API caller should make sure that:
+ *
+ *  * A Component where a given template is defined is standalone
+ *  * Underlying dependency classes are also standalone
+ *  * Dependency class symbols are not eagerly used in a TS file
+ *    where a host component (that owns the template) is located
+ */
+export function findMatchingDirectivesAndPipes(template: string, directiveSelectors: string[]) {
+  const matcher = new SelectorMatcher<unknown[]>();
+  for (const selector of directiveSelectors) {
+    // Create a fake directive instance to account for the logic inside
+    // of the `R3TargetBinder` class (which invokes the `hasBindingPropertyName`
+    // function internally).
+    const fakeDirective = {
+      selector,
+      exportAs: null,
+      inputs: {
+        hasBindingPropertyName() {
+          return false;
+        },
+      },
+      outputs: {
+        hasBindingPropertyName() {
+          return false;
+        },
+      },
+    };
+    matcher.addSelectables(CssSelector.parse(selector), [fakeDirective]);
+  }
+  const parsedTemplate = parseTemplate(template, '' /* templateUrl */);
+  const binder = new R3TargetBinder(matcher as any);
+  const bound = binder.bind({template: parsedTemplate.nodes});
+
+  const eagerDirectiveSelectors = bound.getEagerlyUsedDirectives().map((dir) => dir.selector!);
+  const allMatchedDirectiveSelectors = bound.getUsedDirectives().map((dir) => dir.selector!);
+  const eagerPipes = bound.getEagerlyUsedPipes();
+  return {
+    directives: {
+      regular: eagerDirectiveSelectors,
+      deferCandidates: diff(allMatchedDirectiveSelectors, eagerDirectiveSelectors),
+    },
+    pipes: {
+      regular: eagerPipes,
+      deferCandidates: diff(bound.getUsedPipes(), eagerPipes),
+    },
+  };
+}
 
 /**
  * Processes `Target`s with a given set of directives and performs a binding operation, which
@@ -125,7 +193,7 @@ class Scope implements Visitor {
   /**
    * Named members of the `Scope`, such as `Reference`s or `Variable`s.
    */
-  readonly namedEntities = new Map<string, Reference | Variable>();
+  readonly namedEntities = new Map<string, TemplateEntity>();
 
   /**
    * Set of elements that belong to this scope.
@@ -275,7 +343,7 @@ class Scope implements Visitor {
   }
 
   visitLetDeclaration(decl: LetDeclaration) {
-    // TODO(crisbeto): needs further integration
+    this.maybeDeclare(decl);
   }
 
   // Unused visitors.
@@ -288,7 +356,7 @@ class Scope implements Visitor {
   visitDeferredTrigger(trigger: DeferredTrigger) {}
   visitUnknownBlock(block: UnknownBlock) {}
 
-  private maybeDeclare(thing: Reference | Variable) {
+  private maybeDeclare(thing: TemplateEntity) {
     // Declare something with a name, as long as that name isn't taken.
     if (!this.namedEntities.has(thing.name)) {
       this.namedEntities.set(thing.name, thing);
@@ -300,7 +368,7 @@ class Scope implements Visitor {
    *
    * This can recurse into a parent `Scope` if it's available.
    */
-  lookup(name: string): Reference | Variable | null {
+  lookup(name: string): TemplateEntity | null {
     if (this.namedEntities.has(name)) {
       // Found in the local scope.
       return this.namedEntities.get(name)!;
@@ -541,10 +609,6 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
     content.children.forEach((child) => child.visit(this));
   }
 
-  visitLetDeclaration(decl: LetDeclaration) {
-    // TODO(crisbeto): needs further integration
-  }
-
   // Unused visitors.
   visitVariable(variable: Variable): void {}
   visitReference(reference: Reference): void {}
@@ -557,6 +621,7 @@ class DirectiveBinder<DirectiveT extends DirectiveMeta> implements Visitor {
   visitIcu(icu: Icu): void {}
   visitDeferredTrigger(trigger: DeferredTrigger): void {}
   visitUnknownBlock(block: UnknownBlock) {}
+  visitLetDeclaration(decl: LetDeclaration) {}
 }
 
 /**
@@ -572,8 +637,8 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
   private visitNode: (node: Node) => void;
 
   private constructor(
-    private bindings: Map<AST, Reference | Variable>,
-    private symbols: Map<Reference | Variable, ScopedNode>,
+    private bindings: Map<AST, TemplateEntity>,
+    private symbols: Map<TemplateEntity, ScopedNode>,
     private usedPipes: Set<string>,
     private eagerPipes: Set<string>,
     private deferBlocks: [DeferredBlock, Scope][],
@@ -615,15 +680,15 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
     nodes: Node[],
     scope: Scope,
   ): {
-    expressions: Map<AST, Reference | Variable>;
-    symbols: Map<Variable | Reference, Template>;
+    expressions: Map<AST, TemplateEntity>;
+    symbols: Map<TemplateEntity, Template>;
     nestingLevel: Map<ScopedNode, number>;
     usedPipes: Set<string>;
     eagerPipes: Set<string>;
     deferBlocks: [DeferredBlock, Scope][];
   } {
-    const expressions = new Map<AST, Reference | Variable>();
-    const symbols = new Map<Variable | Reference, Template>();
+    const expressions = new Map<AST, TemplateEntity>();
+    const symbols = new Map<TemplateEntity, Template>();
     const nestingLevel = new Map<ScopedNode, number>();
     const usedPipes = new Set<string>();
     const eagerPipes = new Set<string>();
@@ -748,6 +813,8 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
     this.ingestScopedNode(deferred);
     deferred.triggers.when?.value.visit(this);
     deferred.prefetchTriggers.when?.value.visit(this);
+    deferred.hydrateTriggers.when?.value.visit(this);
+    deferred.hydrateTriggers.never?.visit(this);
     deferred.placeholder && this.visitNode(deferred.placeholder);
     deferred.loading && this.visitNode(deferred.loading);
     deferred.error && this.visitNode(deferred.error);
@@ -803,8 +870,11 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
   }
 
   visitLetDeclaration(decl: LetDeclaration) {
-    // TODO(crisbeto): needs further integration
     decl.value.visit(this);
+
+    if (this.rootNode !== null) {
+      this.symbols.set(decl, this.rootNode);
+    }
   }
 
   override visitPipe(ast: BindingPipe, context: any): any {
@@ -858,7 +928,15 @@ class TemplateBinder extends RecursiveAstVisitor implements Visitor {
 
     // Check whether the name exists in the current scope. If so, map it. Otherwise, the name is
     // probably a property on the top-level component context.
-    let target = this.scope.lookup(name);
+    const target = this.scope.lookup(name);
+
+    // It's not allowed to read template entities via `this`, however it previously worked by
+    // accident (see #55115). Since `@let` declarations are new, we can fix it from the beginning,
+    // whereas pre-existing template entities will be fixed in #55115.
+    if (target instanceof LetDeclaration && ast.receiver instanceof ThisReceiver) {
+      return;
+    }
+
     if (target !== null) {
       this.bindings.set(ast, target);
     }
@@ -889,10 +967,10 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
       BoundAttribute | BoundEvent | Reference | TextAttribute,
       {directive: DirectiveT; node: Element | Template} | Element | Template
     >,
-    private exprTargets: Map<AST, Reference | Variable>,
-    private symbols: Map<Reference | Variable, Template>,
+    private exprTargets: Map<AST, TemplateEntity>,
+    private symbols: Map<TemplateEntity, Template>,
     private nestingLevel: Map<ScopedNode, number>,
-    private scopedNodeEntities: Map<ScopedNode | null, ReadonlySet<Reference | Variable>>,
+    private scopedNodeEntities: Map<ScopedNode | null, ReadonlySet<TemplateEntity>>,
     private usedPipes: Set<string>,
     private eagerPipes: Set<string>,
     rawDeferred: [DeferredBlock, Scope][],
@@ -901,7 +979,7 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
     this.deferredScopes = new Map(rawDeferred);
   }
 
-  getEntitiesInScope(node: ScopedNode | null): ReadonlySet<Reference | Variable> {
+  getEntitiesInScope(node: ScopedNode | null): ReadonlySet<TemplateEntity> {
     return this.scopedNodeEntities.get(node) ?? new Set();
   }
 
@@ -919,11 +997,11 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
     return this.bindings.get(binding) || null;
   }
 
-  getExpressionTarget(expr: AST): Reference | Variable | null {
+  getExpressionTarget(expr: AST): TemplateEntity | null {
     return this.exprTargets.get(expr) || null;
   }
 
-  getDefinitionNodeOfSymbol(symbol: Reference | Variable): ScopedNode | null {
+  getDefinitionNodeOfSymbol(symbol: TemplateEntity): ScopedNode | null {
     return this.symbols.get(symbol) || null;
   }
 
@@ -1046,7 +1124,7 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
    * @param rootNode Root node of the scope.
    * @param name Name of the entity.
    */
-  private findEntityInScope(rootNode: ScopedNode, name: string): Reference | Variable | null {
+  private findEntityInScope(rootNode: ScopedNode, name: string): TemplateEntity | null {
     const entities = this.getEntitiesInScope(rootNode);
 
     for (const entity of entities) {
@@ -1072,19 +1150,17 @@ export class R3BoundTarget<DirectiveT extends DirectiveMeta> implements BoundTar
   }
 }
 
-function extractScopedNodeEntities(
-  rootScope: Scope,
-): Map<ScopedNode | null, Set<Reference | Variable>> {
-  const entityMap = new Map<ScopedNode | null, Map<string, Reference | Variable>>();
+function extractScopedNodeEntities(rootScope: Scope): Map<ScopedNode | null, Set<TemplateEntity>> {
+  const entityMap = new Map<ScopedNode | null, Map<string, TemplateEntity>>();
 
-  function extractScopeEntities(scope: Scope): Map<string, Reference | Variable> {
+  function extractScopeEntities(scope: Scope): Map<string, TemplateEntity> {
     if (entityMap.has(scope.rootNode)) {
       return entityMap.get(scope.rootNode)!;
     }
 
     const currentEntities = scope.namedEntities;
 
-    let entities: Map<string, Reference | Variable>;
+    let entities: Map<string, TemplateEntity>;
     if (scope.parentScope !== null) {
       entities = new Map([...extractScopeEntities(scope.parentScope), ...currentEntities]);
     } else {
@@ -1104,7 +1180,7 @@ function extractScopedNodeEntities(
     extractScopeEntities(scope);
   }
 
-  const templateEntities = new Map<ScopedNode | null, Set<Reference | Variable>>();
+  const templateEntities = new Map<ScopedNode | null, Set<TemplateEntity>>();
   for (const [template, entities] of entityMap) {
     templateEntities.set(template, new Set(entities.values()));
   }

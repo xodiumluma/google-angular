@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {RuntimeError, RuntimeErrorCode} from '../errors';
@@ -41,6 +41,8 @@ function getFriendlyStringFromTNodeType(tNodeType: TNodeType): string {
       return 'projection';
     case TNodeType.Text:
       return 'text';
+    case TNodeType.LetDeclaration:
+      return '@let';
     default:
       // This should not happen as we cover all possible TNode types above.
       return '<unknown>';

@@ -3,42 +3,37 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {PLATFORM_BROWSER_ID, PLATFORM_SERVER_ID} from '@angular/common/src/platform_id';
 import {
-  afterNextRender,
-  afterRender,
-  AfterRenderPhase,
   AfterRenderRef,
   ApplicationRef,
   ChangeDetectorRef,
   Component,
-  computed,
-  createComponent,
-  effect,
   ErrorHandler,
-  inject,
   Injector,
   NgZone,
   PLATFORM_ID,
-  signal,
   Type,
-  untracked,
   ViewContainerRef,
-  ɵinternalAfterNextRender as internalAfterNextRender,
-  ɵqueueStateUpdate as queueStateUpdate,
+  afterNextRender,
+  afterRender,
+  computed,
+  createComponent,
+  effect,
+  inject,
+  signal,
+  AfterRenderPhase,
 } from '@angular/core';
 import {NoopNgZone} from '@angular/core/src/zone/ng_zone';
 import {TestBed} from '@angular/core/testing';
-import {bootstrapApplication} from '@angular/platform-browser';
-import {withBody} from '@angular/private/testing';
 
-import {destroyPlatform} from '../../src/core';
-import {EnvironmentInjector} from '../../src/di';
 import {firstValueFrom} from 'rxjs';
 import {filter} from 'rxjs/operators';
+import {EnvironmentInjector, Injectable} from '../../src/di';
+import {setUseMicrotaskEffectsByDefault} from '@angular/core/src/render3/reactivity/effect';
 
 function createAndAttachComponent<T>(component: Type<T>) {
   const componentRef = createComponent(component, {
@@ -49,162 +44,17 @@ function createAndAttachComponent<T>(component: Type<T>) {
 }
 
 describe('after render hooks', () => {
+  let prev: boolean;
+  beforeEach(() => {
+    prev = setUseMicrotaskEffectsByDefault(false);
+  });
+  afterEach(() => setUseMicrotaskEffectsByDefault(prev));
+
   describe('browser', () => {
+    const COMMON_PROVIDERS = [{provide: PLATFORM_ID, useValue: PLATFORM_BROWSER_ID}];
     const COMMON_CONFIGURATION = {
-      providers: [{provide: PLATFORM_ID, useValue: PLATFORM_BROWSER_ID}],
+      providers: [COMMON_PROVIDERS],
     };
-
-    describe('internalAfterNextRender', () => {
-      it('should run with the expected timing', () => {
-        const log: string[] = [];
-
-        @Component({selector: 'comp'})
-        class Comp {
-          constructor() {
-            // Helper to register into each phase
-            function forEachPhase(fn: (phase: AfterRenderPhase) => void) {
-              for (const phase in AfterRenderPhase) {
-                const val = AfterRenderPhase[phase];
-                if (typeof val === 'number') {
-                  fn(val);
-                }
-              }
-            }
-
-            internalAfterNextRender(() => {
-              log.push('internalAfterNextRender #1');
-            });
-
-            forEachPhase((phase) =>
-              afterRender(
-                () => {
-                  log.push(`afterRender (${AfterRenderPhase[phase]})`);
-                },
-                {phase},
-              ),
-            );
-
-            internalAfterNextRender(() => {
-              log.push('internalAfterNextRender #2');
-            });
-
-            forEachPhase((phase) =>
-              afterNextRender(
-                () => {
-                  log.push(`afterNextRender (${AfterRenderPhase[phase]})`);
-                },
-                {phase},
-              ),
-            );
-
-            internalAfterNextRender(() => {
-              log.push('internalAfterNextRender #3');
-            });
-          }
-        }
-
-        TestBed.configureTestingModule({
-          declarations: [Comp],
-          ...COMMON_CONFIGURATION,
-        });
-        createAndAttachComponent(Comp);
-
-        // It hasn't run at all
-        expect(log).toEqual([]);
-
-        // Running change detection once
-        TestBed.inject(ApplicationRef).tick();
-        expect(log).toEqual([
-          'internalAfterNextRender #1',
-          'internalAfterNextRender #2',
-          'internalAfterNextRender #3',
-          'afterRender (EarlyRead)',
-          'afterNextRender (EarlyRead)',
-          'afterRender (Write)',
-          'afterNextRender (Write)',
-          'afterRender (MixedReadWrite)',
-          'afterNextRender (MixedReadWrite)',
-          'afterRender (Read)',
-          'afterNextRender (Read)',
-        ]);
-
-        // Running change detection again
-        log.length = 0;
-        TestBed.inject(ApplicationRef).tick();
-        expect(log).toEqual([
-          'afterRender (EarlyRead)',
-          'afterRender (Write)',
-          'afterRender (MixedReadWrite)',
-          'afterRender (Read)',
-        ]);
-      });
-
-      it('should refresh views if state changed before user-defined render hooks', () => {
-        let stateInAfterNextRender: number | null = null;
-        let stateInAfterRender: number | null = null;
-        let afterRenderRuns = 0;
-        TestBed.configureTestingModule({
-          ...COMMON_CONFIGURATION,
-        });
-        @Component({
-          template: '{{state()}}',
-          standalone: true,
-        })
-        class App {
-          state = signal(1);
-          constructor() {
-            queueStateUpdate(() => {
-              this.state.set(2);
-            });
-            afterNextRender(() => {
-              stateInAfterNextRender = untracked(this.state);
-            });
-            afterRender(() => {
-              stateInAfterRender = untracked(this.state);
-              afterRenderRuns++;
-            });
-          }
-        }
-
-        createAndAttachComponent(App);
-        TestBed.inject(ApplicationRef).tick();
-        expect(afterRenderRuns).toEqual(1);
-        expect(stateInAfterNextRender!).toEqual(2);
-        expect(stateInAfterRender!).toEqual(2);
-      });
-
-      it(
-        'does not execute queueStateUpdate if application is destroyed',
-        withBody('<app></app>', async () => {
-          destroyPlatform();
-          let executedCallback = false;
-          TestBed.configureTestingModule({
-            ...COMMON_CONFIGURATION,
-          });
-          @Component({
-            template: '',
-            selector: 'app',
-            standalone: true,
-          })
-          class App {}
-
-          const app = await bootstrapApplication(App);
-          queueStateUpdate(
-            () => {
-              executedCallback = true;
-            },
-            {injector: app.injector},
-          );
-          app.destroy();
-
-          // wait a macrotask - at this point the Promise in queueStateUpdate will have been
-          // resolved
-          await new Promise((resolve) => setTimeout(resolve));
-          expect(executedCallback).toBeFalse();
-          destroyPlatform();
-        }),
-      );
-    });
 
     describe('afterRender', () => {
       it('should run with the correct timing', () => {
@@ -493,23 +343,23 @@ describe('after render hooks', () => {
         createAndAttachComponent(Comp);
 
         expect(zoneLog).toEqual([]);
-        TestBed.inject(ApplicationRef).tick();
-        expect(zoneLog).toEqual([false]);
+        TestBed.inject(NgZone).run(() => {
+          TestBed.inject(ApplicationRef).tick();
+          expect(zoneLog).toEqual([false]);
+        });
       });
 
       it('should propagate errors to the ErrorHandler', () => {
         const log: string[] = [];
 
+        @Injectable()
         class FakeErrorHandler extends ErrorHandler {
           override handleError(error: any): void {
             log.push((error as Error).message);
           }
         }
 
-        @Component({
-          selector: 'comp',
-          providers: [{provide: ErrorHandler, useFactory: () => new FakeErrorHandler()}],
-        })
+        @Component({template: ''})
         class Comp {
           constructor() {
             afterRender(() => {
@@ -532,7 +382,7 @@ describe('after render hooks', () => {
 
         TestBed.configureTestingModule({
           declarations: [Comp],
-          ...COMMON_CONFIGURATION,
+          providers: [COMMON_PROVIDERS, {provide: ErrorHandler, useClass: FakeErrorHandler}],
         });
         createAndAttachComponent(Comp);
 
@@ -542,6 +392,90 @@ describe('after render hooks', () => {
       });
 
       it('should run callbacks in the correct phase and order', () => {
+        const log: string[] = [];
+
+        @Component({selector: 'root', template: `<comp-a></comp-a><comp-b></comp-b>`})
+        class Root {}
+
+        @Component({selector: 'comp-a'})
+        class CompA {
+          constructor() {
+            afterRender({
+              earlyRead: () => {
+                log.push('early-read-1');
+              },
+            });
+
+            afterRender({
+              write: () => {
+                log.push('write-1');
+              },
+            });
+
+            afterRender({
+              mixedReadWrite: () => {
+                log.push('mixed-read-write-1');
+              },
+            });
+
+            afterRender({
+              read: () => {
+                log.push('read-1');
+              },
+            });
+          }
+        }
+
+        @Component({selector: 'comp-b'})
+        class CompB {
+          constructor() {
+            afterRender({
+              read: () => {
+                log.push('read-2');
+              },
+            });
+
+            afterRender({
+              mixedReadWrite: () => {
+                log.push('mixed-read-write-2');
+              },
+            });
+
+            afterRender({
+              write: () => {
+                log.push('write-2');
+              },
+            });
+
+            afterRender({
+              earlyRead: () => {
+                log.push('early-read-2');
+              },
+            });
+          }
+        }
+
+        TestBed.configureTestingModule({
+          declarations: [Root, CompA, CompB],
+          ...COMMON_CONFIGURATION,
+        });
+        createAndAttachComponent(Root);
+
+        expect(log).toEqual([]);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual([
+          'early-read-1',
+          'early-read-2',
+          'write-1',
+          'write-2',
+          'mixed-read-write-1',
+          'mixed-read-write-2',
+          'read-1',
+          'read-2',
+        ]);
+      });
+
+      it('should run callbacks in the correct phase and order when using deprecated phase flag', () => {
         const log: string[] = [];
 
         @Component({selector: 'root', template: `<comp-a></comp-a><comp-b></comp-b>`})
@@ -633,6 +567,96 @@ describe('after render hooks', () => {
         ]);
       });
 
+      it('should schedule callbacks for multiple phases at once', () => {
+        const log: string[] = [];
+
+        @Component({selector: 'comp'})
+        class Comp {
+          constructor() {
+            afterRender({
+              earlyRead: () => {
+                log.push('early-read-1');
+              },
+              write: () => {
+                log.push('write-1');
+              },
+              mixedReadWrite: () => {
+                log.push('mixed-read-write-1');
+              },
+              read: () => {
+                log.push('read-1');
+              },
+            });
+
+            afterRender(() => {
+              log.push('mixed-read-write-2');
+            });
+          }
+        }
+
+        TestBed.configureTestingModule({
+          declarations: [Comp],
+          ...COMMON_CONFIGURATION,
+        });
+        createAndAttachComponent(Comp);
+
+        expect(log).toEqual([]);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual([
+          'early-read-1',
+          'write-1',
+          'mixed-read-write-1',
+          'mixed-read-write-2',
+          'read-1',
+        ]);
+      });
+
+      it('should pass data between phases', () => {
+        const log: string[] = [];
+
+        @Component({selector: 'comp'})
+        class Comp {
+          constructor() {
+            afterRender({
+              earlyRead: () => 'earlyRead result',
+              write: (results) => {
+                log.push(`results for write: ${results}`);
+                return 5;
+              },
+              mixedReadWrite: (results) => {
+                log.push(`results for mixedReadWrite: ${results}`);
+                return undefined;
+              },
+              read: (results) => {
+                log.push(`results for read: ${results}`);
+              },
+            });
+
+            afterRender({
+              earlyRead: () => 'earlyRead 2 result',
+              read: (results) => {
+                log.push(`results for read 2: ${results}`);
+              },
+            });
+          }
+        }
+
+        TestBed.configureTestingModule({
+          declarations: [Comp],
+          ...COMMON_CONFIGURATION,
+        });
+        createAndAttachComponent(Comp);
+
+        expect(log).toEqual([]);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual([
+          'results for write: earlyRead result',
+          'results for mixedReadWrite: 5',
+          'results for read: undefined',
+          'results for read 2: earlyRead 2 result',
+        ]);
+      });
+
       describe('throw error inside reactive context', () => {
         it('inside template effect', () => {
           @Component({template: `{{someFn()}}`})
@@ -690,6 +714,53 @@ describe('after render hooks', () => {
             /afterRender\(\) cannot be called from within a reactive context/,
           );
         });
+      });
+
+      it('should not destroy automatically if manualCleanup is set', () => {
+        let afterRenderRef: AfterRenderRef | null = null;
+        let count = 0;
+
+        @Component({selector: 'comp', template: ''})
+        class Comp {
+          constructor() {
+            afterRenderRef = afterRender(() => count++, {manualCleanup: true});
+          }
+        }
+
+        @Component({
+          imports: [Comp],
+          template: `
+            @if (shouldShow) {
+              <comp/>
+            }
+          `,
+        })
+        class App {
+          shouldShow = true;
+        }
+
+        TestBed.configureTestingModule({
+          declarations: [App, Comp],
+          ...COMMON_CONFIGURATION,
+        });
+        const component = createAndAttachComponent(App);
+        const appRef = TestBed.inject(ApplicationRef);
+        expect(count).toBe(0);
+
+        appRef.tick();
+        expect(count).toBe(1);
+
+        component.instance.shouldShow = false;
+        component.changeDetectorRef.detectChanges();
+        appRef.tick();
+        expect(count).toBe(2);
+        appRef.tick();
+        expect(count).toBe(3);
+
+        // Ensure that manual destruction still works.
+        afterRenderRef!.destroy();
+        appRef.tick();
+        expect(count).toBe(3);
       });
     });
 
@@ -752,6 +823,43 @@ describe('after render hooks', () => {
         TestBed.inject(ApplicationRef).tick();
         expect(dynamicCompRef.instance.afterRenderCount).toBe(1);
         expect(compInstance.afterRenderCount).toBe(1);
+      });
+
+      it('should not run until views have stabilized', async () => {
+        // This test uses two components, a Reader and Writer, and arranges CD so that Reader
+        // is checked, and then Writer makes Reader dirty again. An `afterNextRender` should not run
+        // until Reader has been fully refreshed.
+
+        TestBed.configureTestingModule(COMMON_CONFIGURATION);
+        const appRef = TestBed.inject(ApplicationRef);
+
+        const counter = signal(0);
+        @Component({standalone: true, template: '{{counter()}}'})
+        class Reader {
+          counter = counter;
+        }
+
+        @Component({standalone: true, template: ''})
+        class Writer {
+          ngAfterViewInit(): void {
+            counter.set(1);
+          }
+        }
+
+        const ref = createAndAttachComponent(Reader);
+        createAndAttachComponent(Writer);
+
+        let textAtAfterRender: string = '';
+        afterNextRender(
+          () => {
+            // Reader should've been fully refreshed, so capture its template state at this moment.
+            textAtAfterRender = ref.location.nativeElement.innerHTML;
+          },
+          {injector: appRef.injector},
+        );
+
+        await appRef.whenStable();
+        expect(textAtAfterRender).toBe('1');
       });
 
       it('should run all hooks after outer change detection', () => {
@@ -927,8 +1035,10 @@ describe('after render hooks', () => {
         createAndAttachComponent(Comp);
 
         expect(zoneLog).toEqual([]);
-        TestBed.inject(ApplicationRef).tick();
-        expect(zoneLog).toEqual([false]);
+        TestBed.inject(NgZone).run(() => {
+          TestBed.inject(ApplicationRef).tick();
+          expect(zoneLog).toEqual([false]);
+        });
       });
 
       it('should propagate errors to the ErrorHandler', () => {
@@ -940,10 +1050,7 @@ describe('after render hooks', () => {
           }
         }
 
-        @Component({
-          selector: 'comp',
-          providers: [{provide: ErrorHandler, useFactory: () => new FakeErrorHandler()}],
-        })
+        @Component({template: ''})
         class Comp {
           constructor() {
             afterNextRender(() => {
@@ -966,7 +1073,7 @@ describe('after render hooks', () => {
 
         TestBed.configureTestingModule({
           declarations: [Comp],
-          ...COMMON_CONFIGURATION,
+          providers: [COMMON_PROVIDERS, {provide: ErrorHandler, useClass: FakeErrorHandler}],
         });
         createAndAttachComponent(Comp);
 
@@ -984,66 +1091,58 @@ describe('after render hooks', () => {
         @Component({selector: 'comp-a'})
         class CompA {
           constructor() {
-            afterNextRender(
-              () => {
+            afterNextRender({
+              earlyRead: () => {
                 log.push('early-read-1');
               },
-              {phase: AfterRenderPhase.EarlyRead},
-            );
+            });
 
-            afterNextRender(
-              () => {
+            afterNextRender({
+              write: () => {
                 log.push('write-1');
               },
-              {phase: AfterRenderPhase.Write},
-            );
+            });
 
-            afterNextRender(
-              () => {
+            afterNextRender({
+              mixedReadWrite: () => {
                 log.push('mixed-read-write-1');
               },
-              {phase: AfterRenderPhase.MixedReadWrite},
-            );
+            });
 
-            afterNextRender(
-              () => {
+            afterNextRender({
+              read: () => {
                 log.push('read-1');
               },
-              {phase: AfterRenderPhase.Read},
-            );
+            });
           }
         }
 
         @Component({selector: 'comp-b'})
         class CompB {
           constructor() {
-            afterNextRender(
-              () => {
+            afterNextRender({
+              read: () => {
                 log.push('read-2');
               },
-              {phase: AfterRenderPhase.Read},
-            );
+            });
 
-            afterNextRender(
-              () => {
+            afterNextRender({
+              mixedReadWrite: () => {
                 log.push('mixed-read-write-2');
               },
-              {phase: AfterRenderPhase.MixedReadWrite},
-            );
+            });
 
-            afterNextRender(
-              () => {
+            afterNextRender({
+              write: () => {
                 log.push('write-2');
               },
-              {phase: AfterRenderPhase.Write},
-            );
+            });
 
-            afterNextRender(
-              () => {
+            afterNextRender({
+              earlyRead: () => {
                 log.push('early-read-2');
               },
-              {phase: AfterRenderPhase.EarlyRead},
-            );
+            });
           }
         }
 
@@ -1064,6 +1163,96 @@ describe('after render hooks', () => {
           'mixed-read-write-2',
           'read-1',
           'read-2',
+        ]);
+      });
+
+      it('should invoke all the callbacks once when they are registered at the same time', () => {
+        const log: string[] = [];
+
+        @Component({template: ''})
+        class Comp {
+          constructor() {
+            afterNextRender({
+              earlyRead: () => {
+                log.push('early-read');
+              },
+              write: () => {
+                log.push('write');
+              },
+              mixedReadWrite: () => {
+                log.push('mixed-read-write');
+              },
+              read: () => {
+                log.push('read');
+              },
+            });
+          }
+        }
+
+        TestBed.configureTestingModule({
+          declarations: [Comp],
+          ...COMMON_CONFIGURATION,
+        });
+        createAndAttachComponent(Comp);
+
+        expect(log).toEqual([]);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual(['early-read', 'write', 'mixed-read-write', 'read']);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual(['early-read', 'write', 'mixed-read-write', 'read']);
+      });
+
+      it('should invoke all the callbacks each time when they are registered at the same time', () => {
+        const log: string[] = [];
+
+        @Component({template: ''})
+        class Comp {
+          constructor() {
+            afterRender({
+              earlyRead: () => {
+                log.push('early-read');
+                return 'early';
+              },
+              write: (previous) => {
+                log.push(`previous was ${previous}, this is write`);
+                return 'write';
+              },
+              mixedReadWrite: (previous) => {
+                log.push(`previous was ${previous}, this is mixed-read-write`);
+                return 'mixed';
+              },
+              read: (previous) => {
+                log.push(`previous was ${previous}, this is read`);
+                return 'read';
+              },
+            });
+          }
+        }
+
+        TestBed.configureTestingModule({
+          declarations: [Comp],
+          ...COMMON_CONFIGURATION,
+        });
+        createAndAttachComponent(Comp);
+
+        expect(log).toEqual([]);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual([
+          'early-read',
+          'previous was early, this is write',
+          'previous was write, this is mixed-read-write',
+          'previous was mixed, this is read',
+        ]);
+        TestBed.inject(ApplicationRef).tick();
+        expect(log).toEqual([
+          'early-read',
+          'previous was early, this is write',
+          'previous was write, this is mixed-read-write',
+          'previous was mixed, this is read',
+          'early-read',
+          'previous was early, this is write',
+          'previous was write, this is mixed-read-write',
+          'previous was mixed, this is read',
         ]);
       });
     });
@@ -1126,7 +1315,7 @@ describe('after render hooks', () => {
       const fixture = TestBed.createComponent(TestCmp);
       const appRef = TestBed.inject(ApplicationRef);
       appRef.attachView(fixture.componentRef.hostView);
-      await firstValueFrom(appRef.isStable.pipe(filter((stable) => stable)));
+      await appRef.whenStable();
       expect(fixture.nativeElement.innerText).toBe('1');
     });
 
@@ -1262,29 +1451,6 @@ describe('after render hooks', () => {
         createAndAttachComponent(Comp);
         TestBed.inject(ApplicationRef).tick();
         expect(afterRenderCount).toBe(0);
-      });
-    });
-
-    describe('queueStateUpdate', () => {
-      it('should run', () => {
-        let executionCount = 0;
-
-        @Component({selector: 'comp'})
-        class Comp {
-          constructor() {
-            queueStateUpdate(() => {
-              executionCount++;
-            });
-          }
-        }
-
-        TestBed.configureTestingModule({
-          declarations: [Comp],
-          ...COMMON_CONFIGURATION,
-        });
-        createAndAttachComponent(Comp);
-        TestBed.inject(ApplicationRef).tick();
-        expect(executionCount).toBe(1);
       });
     });
   });

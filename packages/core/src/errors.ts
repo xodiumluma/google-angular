@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {ERROR_DETAILS_PAGE_BASE_URL} from './error_details_base_url';
@@ -59,6 +59,7 @@ export const enum RuntimeErrorCode {
   HOST_DIRECTIVE_UNDEFINED_BINDING = 311,
   HOST_DIRECTIVE_CONFLICTING_ALIAS = 312,
   MULTIPLE_MATCHING_PIPES = 313,
+  UNINITIALIZED_LET_ACCESS = 314,
 
   // Bootstrap Errors
   MULTIPLE_PLATFORMS = 400,
@@ -121,7 +122,7 @@ export const enum RuntimeErrorCode {
   // Signal integration errors
   REQUIRED_INPUT_NO_VALUE = -950,
   REQUIRED_QUERY_NO_VALUE = -951,
-  REQUIRED_MODEL_NO_VALUE = -952,
+  REQUIRED_MODEL_NO_VALUE = 952,
 
   // Output()
   OUTPUT_REF_DESTROYED = 953,

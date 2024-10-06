@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {LanguageService} from '../../src/language_service';
@@ -284,6 +284,19 @@ describe('definitions', () => {
       // https://github.com/angular/angular/blob/89c5255b8ca59eed27ede9e1fad69857ab0c6f4f/packages/common/src/directives/ng_for_of.ts#L15
       expect(contextDef.textSpan).toEqual('$implicit');
       expect(contextDef.contextSpan).toContain('$implicit: T;');
+    });
+  });
+
+  describe('@let declarations', () => {
+    it('should work for a @let declaration', () => {
+      const definitions = getDefinitionsAndAssertBoundSpan({
+        templateOverride: `@let value = 42; {{val¦ue}}`,
+        expectedSpanText: 'value',
+      });
+
+      expect(definitions.length).toBe(1);
+      const [def] = definitions;
+      expect(def.textSpan).toBe('@let value = 42');
     });
   });
 

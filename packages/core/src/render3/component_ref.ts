@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {setActiveConsumer} from '@angular/core/primitives/signals';
@@ -14,9 +14,6 @@ import {
   NotificationSource,
 } from '../change_detection/scheduling/zoneless_scheduling';
 import {Injector} from '../di/injector';
-import {convertToBitFlags} from '../di/injector_compatibility';
-import {InjectFlags, InjectOptions} from '../di/interface/injector';
-import {ProviderToken} from '../di/provider_token';
 import {EnvironmentInjector} from '../di/r3_injector';
 import {RuntimeError, RuntimeErrorCode} from '../errors';
 import {DehydratedView} from '../hydration/interfaces';
@@ -32,9 +29,7 @@ import {NgModuleRef} from '../linker/ng_module_factory';
 import {Renderer2, RendererFactory2} from '../render/api';
 import {Sanitizer} from '../sanitization/sanitizer';
 import {assertDefined, assertGreaterThan, assertIndexInRange} from '../util/assert';
-import {NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR} from '../view/provider_flags';
 
-import {AfterRenderEventManager} from './after_render_hooks';
 import {assertComponentType, assertNoDuplicateDirectives} from './assert';
 import {attachPatchData} from './context_discovery';
 import {getComponentDef} from './definition';
@@ -45,10 +40,11 @@ import {reportUnknownPropertyError} from './instructions/element_validation';
 import {markViewDirty} from './instructions/mark_view_dirty';
 import {renderView} from './instructions/render';
 import {
-  addToViewTree,
+  addToEndOfViewTree,
   createLView,
   createTView,
   executeContentQueries,
+  getInitialLViewFlagsFromDef,
   getOrCreateComponentTView,
   getOrCreateTNode,
   initializeDirectives,
@@ -91,6 +87,8 @@ import {mergeHostAttrs, setUpAttributes} from './util/attrs_utils';
 import {debugStringifyTypeForError, stringifyForError} from './util/stringify_utils';
 import {getComponentLViewByIndex, getNativeByTNode, getTNode} from './util/view_utils';
 import {ViewRef} from './view_ref';
+import {ChainedInjector} from './chained_injector';
+import {unregisterLView} from './interfaces/lview_tracking';
 
 export class ComponentFactoryResolver extends AbstractComponentFactoryResolver {
   /**
@@ -107,10 +105,23 @@ export class ComponentFactoryResolver extends AbstractComponentFactoryResolver {
   }
 }
 
-function toRefArray<T>(map: {
-  [P in keyof T]?: string | [minifiedName: string, flags: InputFlags];
-}): {propName: string; templateName: string}[] {
-  const array: {propName: string; templateName: string}[] = [];
+function toRefArray<T>(
+  map: DirectiveDef<T>['inputs'],
+  isInputMap: true,
+): ComponentFactory<T>['inputs'];
+function toRefArray<T>(
+  map: DirectiveDef<T>['outputs'],
+  isInput: false,
+): ComponentFactory<T>['outputs'];
+
+function toRefArray<
+  T,
+  IsInputMap extends boolean,
+  Return extends IsInputMap extends true
+    ? ComponentFactory<T>['inputs']
+    : ComponentFactory<T>['outputs'],
+>(map: DirectiveDef<T>['inputs'] | DirectiveDef<T>['outputs'], isInputMap: IsInputMap): Return {
+  const array: Return = [] as unknown as Return;
   for (const publicName in map) {
     if (!map.hasOwnProperty(publicName)) {
       continue;
@@ -121,10 +132,22 @@ function toRefArray<T>(map: {
       continue;
     }
 
-    array.push({
-      propName: Array.isArray(value) ? value[0] : value,
-      templateName: publicName,
-    });
+    const isArray = Array.isArray(value);
+    const propName: string = isArray ? value[0] : value;
+    const flags: InputFlags = isArray ? value[1] : InputFlags.None;
+
+    if (isInputMap) {
+      (array as ComponentFactory<T>['inputs']).push({
+        propName: propName,
+        templateName: publicName,
+        isSignal: (flags & InputFlags.SignalBased) !== 0,
+      });
+    } else {
+      (array as ComponentFactory<T>['outputs']).push({
+        propName: propName,
+        templateName: publicName,
+      });
+    }
   }
   return array;
 }
@@ -132,40 +155,6 @@ function toRefArray<T>(map: {
 function getNamespace(elementName: string): string | null {
   const name = elementName.toLowerCase();
   return name === 'svg' ? SVG_NAMESPACE : name === 'math' ? MATH_ML_NAMESPACE : null;
-}
-
-/**
- * Injector that looks up a value using a specific injector, before falling back to the module
- * injector. Used primarily when creating components or embedded views dynamically.
- */
-export class ChainedInjector implements Injector {
-  constructor(
-    public injector: Injector,
-    public parentInjector: Injector,
-  ) {}
-
-  get<T>(token: ProviderToken<T>, notFoundValue?: T, flags?: InjectFlags | InjectOptions): T {
-    flags = convertToBitFlags(flags);
-    const value = this.injector.get<T | typeof NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR>(
-      token,
-      NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR,
-      flags,
-    );
-
-    if (
-      value !== NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR ||
-      notFoundValue === (NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR as unknown as T)
-    ) {
-      // Return the value from the root element injector when
-      // - it provides it
-      //   (value !== NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR)
-      // - the module injector should not be checked
-      //   (notFoundValue === NOT_FOUND_CHECK_ONLY_ELEMENT_INJECTOR)
-      return value as T;
-    }
-
-    return this.parentInjector.get(token, notFoundValue, flags);
-  }
 }
 
 /**
@@ -180,15 +169,12 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
   override get inputs(): {
     propName: string;
     templateName: string;
+    isSignal: boolean;
     transform?: (value: any) => any;
   }[] {
     const componentDef = this.componentDef;
     const inputTransforms = componentDef.inputTransforms;
-    const refArray = toRefArray(componentDef.inputs) as {
-      propName: string;
-      templateName: string;
-      transform?: (value: any) => any;
-    }[];
+    const refArray = toRefArray(componentDef.inputs, true);
 
     if (inputTransforms !== null) {
       for (const input of refArray) {
@@ -202,7 +188,7 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
   }
 
   override get outputs(): {propName: string; templateName: string}[] {
-    return toRefArray(this.componentDef.outputs);
+    return toRefArray(this.componentDef.outputs, false);
   }
 
   /**
@@ -275,15 +261,11 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
       }
       const sanitizer = rootViewInjector.get(Sanitizer, null);
 
-      const afterRenderEventManager = rootViewInjector.get(AfterRenderEventManager, null);
       const changeDetectionScheduler = rootViewInjector.get(ChangeDetectionScheduler, null);
 
       const environment: LViewEnvironment = {
         rendererFactory,
         sanitizer,
-        // We don't use inline effects (yet).
-        inlineEffectRunner: null,
-        afterRenderEventManager,
         changeDetectionScheduler,
       };
 
@@ -350,6 +332,7 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
 
       let component: T;
       let tElementNode: TElementNode;
+      let componentView: LView | null = null;
 
       try {
         const rootComponentDef = this.componentDef;
@@ -371,7 +354,7 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
         }
 
         const hostTNode = createRootComponentTNode(rootLView, hostRNode);
-        const componentView = createRootComponentView(
+        componentView = createRootComponentView(
           hostTNode,
           hostRNode,
           rootComponentDef,
@@ -405,6 +388,14 @@ export class ComponentFactory<T> extends AbstractComponentFactory<T> {
           [LifecycleHooksFeature],
         );
         renderView(rootTView, rootLView, null);
+      } catch (e) {
+        // Stop tracking the views if creation failed since
+        // the consumer won't have a way to dereference them.
+        if (componentView !== null) {
+          unregisterLView(componentView);
+        }
+        unregisterLView(rootLView);
+        throw e;
       } finally {
         leaveView();
       }
@@ -543,17 +534,11 @@ function createRootComponentView(
     hydrationInfo = retrieveHydrationInfo(hostRNode, rootView[INJECTOR]!);
   }
   const viewRenderer = environment.rendererFactory.createRenderer(hostRNode, rootComponentDef);
-  let lViewFlags = LViewFlags.CheckAlways;
-  if (rootComponentDef.signals) {
-    lViewFlags = LViewFlags.SignalView;
-  } else if (rootComponentDef.onPush) {
-    lViewFlags = LViewFlags.Dirty;
-  }
   const componentView = createLView(
     rootView,
     getOrCreateComponentTView(rootComponentDef),
     null,
-    lViewFlags,
+    getInitialLViewFlagsFromDef(rootComponentDef),
     rootView[tNode.index],
     tNode,
     environment,
@@ -567,7 +552,7 @@ function createRootComponentView(
     markAsComponentHost(tView, tNode, rootDirectives.length - 1);
   }
 
-  addToViewTree(rootView, componentView);
+  addToEndOfViewTree(rootView, componentView);
 
   // Store component view at node index, with node as the HOST
   return (rootView[tNode.index] = componentView);
@@ -687,7 +672,7 @@ function projectNodes(
     // complex checks down the line.
     // We also normalize the length of the passed in projectable nodes (to match the number of
     // <ng-container> slots defined by a component).
-    projection.push(nodesforSlot != null ? Array.from(nodesforSlot) : null);
+    projection.push(nodesforSlot != null && nodesforSlot.length ? Array.from(nodesforSlot) : null);
   }
 }
 

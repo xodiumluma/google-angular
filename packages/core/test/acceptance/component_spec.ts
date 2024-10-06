@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {DOCUMENT, NgIf} from '@angular/common';
@@ -22,6 +22,7 @@ import {
   Injectable,
   InjectionToken,
   Injector,
+  input,
   Input,
   NgModule,
   OnDestroy,
@@ -192,10 +193,9 @@ describe('component', () => {
       expect(match).toBeDefined();
       expect(match.length).toEqual(2);
       expect(html).toMatch(
-        `<leaf ${match[0].replace('_nghost', '_ngcontent')}="" ${match[1]}=""><span ${match[1].replace(
-          '_nghost',
-          '_ngcontent',
-        )}="">bar</span></leaf></div>`,
+        `<leaf ${match[0].replace('_nghost', '_ngcontent')}="" ${
+          match[1]
+        }=""><span ${match[1].replace('_nghost', '_ngcontent')}="">bar</span></leaf></div>`,
       );
     });
   });
@@ -737,6 +737,7 @@ describe('component', () => {
       componentRef.instance.name = 'ZoneJS';
       componentRef.changeDetectorRef.detectChanges();
       expect(hostElement.textContent).toBe('Hello ZoneJS!');
+      componentRef.destroy();
     });
 
     it('should create an instance of an NgModule-based component', () => {
@@ -796,6 +797,7 @@ describe('component', () => {
 
       componentRef.changeDetectorRef.detectChanges();
       expect(hostElement.innerHTML.replace(/\s*/g, '')).toBe('<p>1</p>|<p>2</p>|<p>3</p>');
+      componentRef.destroy();
     });
 
     it('should be able to inject tokens from EnvironmentInjector', () => {
@@ -816,6 +818,7 @@ describe('component', () => {
       componentRef.changeDetectorRef.detectChanges();
 
       expect(hostElement.textContent).toBe('Token: EnvironmentInjector(A)');
+      componentRef.destroy();
     });
 
     it('should be able to use NodeInjector from the node hierarchy', () => {
@@ -889,6 +892,7 @@ describe('component', () => {
       expect(hostElement.tagName.toLowerCase()).toBe(selector);
 
       expect(hostElement.textContent).toBe('Hello Angular!');
+      componentRef.destroy();
     });
 
     it(
@@ -916,6 +920,7 @@ describe('component', () => {
         expect(hostElement.tagName.toLowerCase()).toBe('div');
 
         expect(hostElement.textContent).toBe('Hello Angular!');
+        componentRef.destroy();
       },
     );
 
@@ -968,6 +973,7 @@ describe('component', () => {
       })
       class StandaloneComponent {
         @Input({alias: 'input-alias-c', transform: transformFn}) inputC: unknown;
+        @Input({isSignal: true} as Input) inputD = input(false);
       }
 
       const mirror = reflectComponentType(StandaloneComponent)!;
@@ -976,9 +982,15 @@ describe('component', () => {
       expect(mirror.type).toBe(StandaloneComponent);
       expect(mirror.isStandalone).toEqual(true);
       expect(mirror.inputs).toEqual([
-        {propName: 'input-a', templateName: 'input-a'},
-        {propName: 'input-b', templateName: 'input-alias-b'},
-        {propName: 'inputC', templateName: 'input-alias-c', transform: transformFn},
+        {propName: 'input-a', templateName: 'input-a', isSignal: false},
+        {propName: 'input-b', templateName: 'input-alias-b', isSignal: false},
+        {
+          propName: 'inputC',
+          templateName: 'input-alias-c',
+          transform: transformFn,
+          isSignal: false,
+        },
+        {propName: 'inputD', templateName: 'inputD', isSignal: true},
       ]);
       expect(mirror.outputs).toEqual([
         {propName: 'output-a', templateName: 'output-a'},
@@ -1016,9 +1028,14 @@ describe('component', () => {
       expect(mirror.type).toBe(NonStandaloneComponent);
       expect(mirror.isStandalone).toEqual(false);
       expect(mirror.inputs).toEqual([
-        {propName: 'input-a', templateName: 'input-a'},
-        {propName: 'input-b', templateName: 'input-alias-b'},
-        {propName: 'inputC', templateName: 'input-alias-c', transform: transformFn},
+        {propName: 'input-a', templateName: 'input-a', isSignal: false},
+        {propName: 'input-b', templateName: 'input-alias-b', isSignal: false},
+        {
+          propName: 'inputC',
+          templateName: 'input-alias-c',
+          transform: transformFn,
+          isSignal: false,
+        },
       ]);
       expect(mirror.outputs).toEqual([
         {propName: 'output-a', templateName: 'output-a'},

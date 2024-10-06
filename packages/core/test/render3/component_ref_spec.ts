@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {ComponentRef} from '@angular/core';
@@ -93,9 +93,9 @@ describe('ComponentFactory', () => {
       expect(cf.selector).toBe('test[foo],bar');
 
       expect(cf.inputs).toEqual([
-        {propName: 'in1', templateName: 'in1'},
-        {propName: 'in2', templateName: 'input-attr-2'},
-        {propName: 'in3', templateName: 'input-attr-3', transform: transformFn},
+        {propName: 'in1', templateName: 'in1', isSignal: false},
+        {propName: 'in2', templateName: 'input-attr-2', isSignal: false},
+        {propName: 'in3', templateName: 'input-attr-3', transform: transformFn, isSignal: false},
       ]);
       expect(cf.outputs).toEqual([
         {propName: 'out1', templateName: 'out1'},

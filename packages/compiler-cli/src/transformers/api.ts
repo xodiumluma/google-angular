@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import ts from 'typescript';
@@ -19,8 +19,6 @@ export function isTsDiagnostic(diagnostic: any): diagnostic is ts.Diagnostic {
 }
 
 export interface CompilerOptions extends NgCompilerOptions, ts.CompilerOptions {
-  // NOTE: These comments and aio/content/guides/aot-compiler.md should be kept in sync.
-
   // Write statistics about compilation (e.g. total time, ...)
   // Note: this is the --diagnostics command line option from TS (which is @internal
   // on ts.CompilerOptions interface).

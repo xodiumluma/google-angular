@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import * as o from '../../../../output/output_ast';
@@ -41,7 +41,7 @@ export function saveAndRestoreView(job: ComponentCompilationJob): void {
       if (!needsRestoreView) {
         for (const handlerOp of op.handlerOps) {
           ir.visitExpressionsInOp(handlerOp, (expr) => {
-            if (expr instanceof ir.ReferenceExpr) {
+            if (expr instanceof ir.ReferenceExpr || expr instanceof ir.ContextLetReferenceExpr) {
               // Listeners that reference() a local ref need the save/restore view operation.
               needsRestoreView = true;
             }

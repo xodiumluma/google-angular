@@ -3,11 +3,12 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {
   AfterViewInit,
+  computed,
   Directive,
   EventEmitter,
   forwardRef,
@@ -16,6 +17,8 @@ import {
   Optional,
   Provider,
   Self,
+  signal,
+  untracked,
   ɵWritable as Writable,
 } from '@angular/core';
 
@@ -32,8 +35,8 @@ import {
 import {ControlContainer} from './control_container';
 import {Form} from './form_interface';
 import {NgControl} from './ng_control';
-import {NgModel} from './ng_model';
-import {NgModelGroup} from './ng_model_group';
+import type {NgModel} from './ng_model';
+import type {NgModelGroup} from './ng_model_group';
 import {
   CALL_SET_DISABLED_STATE,
   SetDisabledStateOption,
@@ -126,7 +129,12 @@ export class NgForm extends ControlContainer implements Form, AfterViewInit {
    * @description
    * Returns whether the form submission has been triggered.
    */
-  public readonly submitted: boolean = false;
+  get submitted(): boolean {
+    return untracked(this.submittedReactive);
+  }
+  /** @internal */
+  readonly _submitted = computed(() => this.submittedReactive());
+  private readonly submittedReactive = signal(false);
 
   private _directives = new Set<NgModel>();
 
@@ -327,7 +335,7 @@ export class NgForm extends ControlContainer implements Form, AfterViewInit {
    * @param $event The "submit" event object
    */
   onSubmit($event: Event): boolean {
-    (this as Writable<this>).submitted = true;
+    this.submittedReactive.set(true);
     syncPendingControls(this.form, this._directives);
     this.ngSubmit.emit($event);
     // Forms with `method="dialog"` have some special behavior
@@ -351,7 +359,7 @@ export class NgForm extends ControlContainer implements Form, AfterViewInit {
    */
   resetForm(value: any = undefined): void {
     this.form.reset(value);
-    (this as Writable<this>).submitted = false;
+    this.submittedReactive.set(false);
   }
 
   private _setUpdateStrategy() {

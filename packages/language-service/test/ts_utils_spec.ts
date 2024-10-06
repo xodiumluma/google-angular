@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {initMockFileSystem} from '@angular/compiler-cli/src/ngtsc/file_system/testing';
@@ -21,7 +21,7 @@ import {
   printNode,
   updateImport,
   updateObjectValueForKey,
-} from '../src/ts_utils';
+} from '../src/utils/ts_utils';
 import {LanguageServiceTestEnv, OpenBuffer, Project} from '../testing';
 
 describe('TS util', () => {
@@ -182,12 +182,12 @@ describe('TS util', () => {
 
       it('creates a non-existent property', () => {
         const obj = updateObjectValueForKey(oldObj, 'newKey', valueAppenderFn);
-        expect(print(obj)).toBe('{ foo: "bar", newKey: "baz" }');
+        expect(print(obj)).toBe('newKey: "baz"');
       });
 
       it('updates an existing property', () => {
         const obj = updateObjectValueForKey(oldObj, 'foo', valueAppenderFn);
-        expect(print(obj)).toBe('{ foo: "barbaz" }');
+        expect(print(obj)).toBe('foo: "barbaz"');
       });
     });
 
@@ -215,12 +215,17 @@ describe('TS util', () => {
 
     it('updateImport', () => {
       let imp = generateImport('Foo', null, './foo');
-      let namedImp = updateImport(imp.importClause!.namedBindings! as ts.NamedImports, 'Bar', null);
-      expect(print(namedImp)).toEqual(`{ Foo, Bar }`);
-      namedImp = updateImport(imp.importClause!.namedBindings! as ts.NamedImports, 'Foo_2', 'Foo');
-      expect(print(namedImp)).toEqual(`{ Foo, Foo as Foo_2 }`);
-      namedImp = updateImport(imp.importClause!.namedBindings! as ts.NamedImports, 'Bar', 'Bar');
-      expect(print(namedImp)).toEqual(`{ Foo, Bar }`);
+      let namedImp = updateImport(imp, 'Bar', null);
+      expect(print(namedImp!)).toEqual(`{ Foo, Bar }`);
+      namedImp = updateImport(imp, 'Foo_2', 'Foo');
+      expect(print(namedImp!)).toEqual(`{ Foo, Foo as Foo_2 }`);
+      namedImp = updateImport(imp, 'Bar', 'Bar');
+      expect(print(namedImp!)).toEqual(`{ Foo, Bar }`);
+      namedImp = updateImport(imp, 'default', 'Baz');
+      expect(print(namedImp!)).toEqual(`Baz, { Foo }`);
+      imp = generateImport('default', 'Foo', './foo');
+      namedImp = updateImport(imp, 'Bar', null);
+      expect(print(namedImp!)).toEqual(`Foo, { Bar }`);
     });
 
     it('nonCollidingImportName', () => {

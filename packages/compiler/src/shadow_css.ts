@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 /**
@@ -324,7 +324,9 @@ export class ShadowCss {
     unscopedKeyframesSet: ReadonlySet<string>,
   ): string {
     return keyframe.replace(/^(\s*)(['"]?)(.+?)\2(\s*)$/, (_, spaces1, quote, name, spaces2) => {
-      name = `${unscopedKeyframesSet.has(unescapeQuotes(name, quote)) ? scopeSelector + '_' : ''}${name}`;
+      name = `${
+        unscopedKeyframesSet.has(unescapeQuotes(name, quote)) ? scopeSelector + '_' : ''
+      }${name}`;
       return `${spaces1}${quote}${name}${quote}${spaces2}`;
     });
   }
@@ -334,8 +336,8 @@ export class ShadowCss {
    * animation declaration (with possibly multiple animation definitions)
    *
    * The regular expression can be divided in three parts
-   *  - (^|\s+)
-   *    simply captures how many (if any) leading whitespaces are present
+   *  - (^|\s+|,)
+   *    captures how many (if any) leading whitespaces are present or a comma
    *  - (?:(?:(['"])((?:\\\\|\\\2|(?!\2).)+)\2)|(-?[A-Za-z][\w\-]*))
    *    captures two different possible keyframes, ones which are quoted or ones which are valid css
    * idents (custom properties excluded)
@@ -344,7 +346,7 @@ export class ShadowCss {
    * semicolon or the end of the string
    */
   private _animationDeclarationKeyframesRe =
-    /(^|\s+)(?:(?:(['"])((?:\\\\|\\\2|(?!\2).)+)\2)|(-?[A-Za-z][\w\-]*))(?=[,\s]|$)/g;
+    /(^|\s+|,)(?:(?:(['"])((?:\\\\|\\\2|(?!\2).)+)\2)|(-?[A-Za-z][\w\-]*))(?=[,\s]|$)/g;
 
   /**
    * Scope an animation rule so that the keyframes mentioned in such rule
@@ -364,7 +366,7 @@ export class ShadowCss {
     unscopedKeyframesSet: ReadonlySet<string>,
   ): CssRule {
     let content = rule.content.replace(
-      /((?:^|\s+|;)(?:-webkit-)?animation(?:\s*):(?:\s*))([^;]+)/g,
+      /((?:^|\s+|;)(?:-webkit-)?animation\s*:\s*),*([^;]+)/g,
       (_, start, animationDeclarations) =>
         start +
         animationDeclarations.replace(

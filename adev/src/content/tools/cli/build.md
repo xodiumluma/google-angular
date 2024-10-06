@@ -9,7 +9,7 @@ Angular CLI includes four builders typically used as `build` targets:
 | Builder                                         | Purpose                                                                                                                                                                           |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@angular-devkit/build-angular:browser`         | Bundles a client-side application for use in a browser with [Webpack](https://webpack.js.org/).                                                                                   |
-| `@angular-devkit/build-angular:browser-esbuild` | Bundles a client-side application for use in a browser with [esbuild](https://esbuild.github.io/). See [`browser-esbuild` documentation](tools/cli/esbuild) for more information. |
+| `@angular-devkit/build-angular:browser-esbuild` | Bundles a client-side application for use in a browser with [esbuild](https://esbuild.github.io/). See [`browser-esbuild` documentation](tools/cli/build-system-migration#manual-migration-to-the-compatibility-builder) for more information. |
 | `@angular-devkit/build-angular:application`     | Builds an application with a client-side bundle, a Node server, and build-time prerendered routes with [esbuild](https://esbuild.github.io/).                                     |
 | `@angular-devkit/build-angular:ng-packagr`      | Builds an Angular library adhering to [Angular Package Format](tools/libraries/angular-package-format).                                                                           |
 
@@ -145,7 +145,7 @@ Firefox ESR
 
 </docs-code>
 
-To override the internal configuration, run [`ng generate config browserslist`](cli/generate#config-command), which generates a `.browserslistrc` configuration file in the project directory.
+To override the internal configuration, run [`ng generate config browserslist`](cli/generate/config), which generates a `.browserslistrc` configuration file in the project directory.
 
 See the [browserslist repository](https://github.com/browserslist/browserslist) for more examples of how to target specific browsers and versions.
 Avoid expanding this list to more browsers. Even if your application code more broadly compatible, Angular itself might not be.

@@ -1,14 +1,14 @@
 {
   "cli-hello-world": {
     "uncompressed": {
-      "main": 127322,
+      "main": 132425,
       "polyfills": 33792
     }
   },
   "cli-hello-world-ivy-i18n": {
     "uncompressed": {
-      "main": 130590,
-      "polyfills": 34676
+      "main": 135813,
+      "polyfills": 35883
     }
   },
   "cli-hello-world-lazy": {
@@ -20,7 +20,7 @@
   },
   "forms": {
     "uncompressed": {
-      "main": 171726,
+      "main": 176726,
       "polyfills": 33772
     }
   },
@@ -41,22 +41,22 @@
   },
   "standalone-bootstrap": {
     "uncompressed": {
-      "main": 85055,
+      "main": 94769,
       "polyfills": 33802
     }
   },
   "defer": {
     "uncompressed": {
-      "main": 12148,
+      "main": 11497,
       "polyfills": 33807,
       "defer.component": 371
     }
   },
   "platform-server-hydration/browser": {
     "uncompressed": {
-      "main": 207890,
+      "main": 212989,
       "polyfills": 33807,
-      "event-dispatch-contract.min": 648
+      "event-dispatch-contract.min": 476
     }
   }
 }

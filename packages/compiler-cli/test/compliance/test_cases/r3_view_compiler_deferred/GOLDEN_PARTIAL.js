@@ -25,7 +25,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
       @defer {Deferred content}
       <p>Content after defer block</p>
     </div>
-  `
+  `,
                 }]
         }] });
 
@@ -81,7 +81,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
         Calendar failed to load <i>sad</i>
       }
     </div>
-  `
+  `,
                 }]
         }] });
 
@@ -120,7 +120,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     } @placeholder (minimum 2s) {
       <img src="placeholder.gif">
     }
-  `
+  `,
                 }]
         }] });
 
@@ -157,7 +157,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     } @loading(minimum 2s; after 500ms) {
       <img src="loading.gif">
     }
-  `
+  `,
                 }]
         }] });
 
@@ -226,7 +226,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     </div>
   `,
                     standalone: true,
-                    imports: [EagerDep, LazyDep, LoadingDep]
+                    imports: [EagerDep, LazyDep, LoadingDep],
                 }]
         }] });
 
@@ -264,7 +264,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             type: Directive,
             args: [{
                     selector: 'lazy-dep',
-                    standalone: true
+                    standalone: true,
                 }]
         }] });
 export class MyApp {
@@ -294,7 +294,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     </div>
   `,
                     standalone: true,
-                    imports: [LazyDep]
+                    imports: [LazyDep],
                 }]
         }] });
 
@@ -414,7 +414,7 @@ i0.ɵɵngDeclareClassMetadataAsync({ minVersion: "18.0.0", version: "0.0.0-PLACE
     </div>
   `,
                         standalone: true,
-                        imports: [EagerDep, LazyDep, LoadingDep]
+                        imports: [EagerDep, LazyDep, LoadingDep],
                     }]
             }], ctorParameters: null, propDecorators: null }) });
 
@@ -470,7 +470,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
       } @placeholder {
         <button #button>Click me</button>
       }
-  `
+  `,
                 }]
         }] });
 
@@ -529,7 +529,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
       } @placeholder {
         <button #button>Click me</button>
       }
-  `
+  `,
                 }]
         }] });
 
@@ -541,6 +541,102 @@ export declare class MyApp {
     message: string;
     isReady: boolean;
     isVisible(): boolean;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyApp, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyApp, "ng-component", never, {}, {}, never, never, false, never>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: defer_with_hydrate_triggers.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyApp {
+    constructor() {
+        this.message = 'hello';
+        this.isReady = true;
+    }
+    isVisible() {
+        return false;
+    }
+}
+MyApp.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyApp, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyApp.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "0.0.0-PLACEHOLDER", type: MyApp, selector: "ng-component", ngImport: i0, template: `
+    {{message}}
+    @defer (
+      hydrate when isVisible() || isReady;
+      hydrate on idle, timer(1337);
+      hydrate on immediate, hover;
+      hydrate on interaction;
+      hydrate on viewport) {
+      {{message}}
+    }
+  `, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyApp, decorators: [{
+            type: Component,
+            args: [{
+                    template: `
+    {{message}}
+    @defer (
+      hydrate when isVisible() || isReady;
+      hydrate on idle, timer(1337);
+      hydrate on immediate, hover;
+      hydrate on interaction;
+      hydrate on viewport) {
+      {{message}}
+    }
+  `,
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: defer_with_hydrate_triggers.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyApp {
+    message: string;
+    isReady: boolean;
+    isVisible(): boolean;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyApp, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyApp, "ng-component", never, {}, {}, never, never, false, never>;
+}
+
+/****************************************************************************************************
+ * PARTIAL FILE: defer_hydrate_order.js
+ ****************************************************************************************************/
+import { Component } from '@angular/core';
+import * as i0 from "@angular/core";
+export class MyApp {
+    constructor() {
+        this.isReady = true;
+    }
+}
+MyApp.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyApp, deps: [], target: i0.ɵɵFactoryTarget.Component });
+MyApp.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "0.0.0-PLACEHOLDER", type: MyApp, selector: "ng-component", ngImport: i0, template: `
+    @defer (when isReady; hydrate on timer(1337); prefetch on viewport) {
+      Hello
+    } @placeholder {
+      <span>Placeholder</span>
+    }
+  `, isInline: true });
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDER", ngImport: i0, type: MyApp, decorators: [{
+            type: Component,
+            args: [{
+                    template: `
+    @defer (when isReady; hydrate on timer(1337); prefetch on viewport) {
+      Hello
+    } @placeholder {
+      <span>Placeholder</span>
+    }
+  `,
+                }]
+        }] });
+
+/****************************************************************************************************
+ * PARTIAL FILE: defer_hydrate_order.d.ts
+ ****************************************************************************************************/
+import * as i0 from "@angular/core";
+export declare class MyApp {
+    isReady: boolean;
     static ɵfac: i0.ɵɵFactoryDeclaration<MyApp, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<MyApp, "ng-component", never, {}, {}, never, never, false, never>;
 }
@@ -587,7 +683,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     }
   `,
                     standalone: true,
-                    imports: [TestPipe]
+                    imports: [TestPipe],
                 }]
         }] });
 
@@ -645,7 +741,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
         </div>
       </div>
     </div>
-  `
+  `,
                 }]
         }] });
 
@@ -696,7 +792,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
         </ng-template>
       </ng-template>
     </ng-template>
-  `
+  `,
                 }]
         }] });
 
@@ -747,7 +843,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
         </div>
       </div>
     }
-  `
+  `,
                 }]
         }] });
 
@@ -788,7 +884,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
     } @placeholder {
       <button>Click me</button>
     }
-  `
+  `,
                 }]
         }] });
 
@@ -839,7 +935,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'local-dep',
                     standalone: true,
-                    template: 'Local dependency'
+                    template: 'Local dependency',
                 }]
         }] });
 export class TestCmp {
@@ -862,7 +958,7 @@ i0.ɵɵngDeclareClassMetadataAsync({ minVersion: "18.0.0", version: "0.0.0-PLACE
 	<cmp-a />
 	<local-dep />
 	}
-`
+`,
                     }]
             }], ctorParameters: null, propDecorators: null }) });
 
@@ -917,7 +1013,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'local-dep',
                     standalone: true,
-                    template: 'Local dependency'
+                    template: 'Local dependency',
                 }]
         }] });
 export class TestCmp {
@@ -940,7 +1036,7 @@ i0.ɵɵngDeclareClassMetadataAsync({ minVersion: "18.0.0", version: "0.0.0-PLACE
 	<cmp-a />
 	<local-dep />
 	}
-`
+`,
                     }]
             }], ctorParameters: null, propDecorators: null }) });
 
@@ -971,7 +1067,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "0.0.0-PLACEHOLDE
             args: [{
                     selector: 'my-lazy-cmp',
                     standalone: true,
-                    template: 'Hi!'
+                    template: 'Hi!',
                 }]
         }] });
 class SimpleComponent {

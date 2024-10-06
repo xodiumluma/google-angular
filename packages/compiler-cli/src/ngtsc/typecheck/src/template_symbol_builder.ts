@@ -3,11 +3,12 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {
   AST,
+  ASTWithName,
   ASTWithSource,
   BindingPipe,
   ParseSourceSpan,
@@ -18,6 +19,7 @@ import {
   TmplAstBoundAttribute,
   TmplAstBoundEvent,
   TmplAstElement,
+  TmplAstLetDeclaration,
   TmplAstNode,
   TmplAstReference,
   TmplAstTemplate,
@@ -39,6 +41,7 @@ import {
   ElementSymbol,
   ExpressionSymbol,
   InputBindingSymbol,
+  LetDeclarationSymbol,
   OutputBindingSymbol,
   PipeSymbol,
   ReferenceSymbol,
@@ -81,7 +84,9 @@ export class SymbolBuilder {
   ) {}
 
   getSymbol(node: TmplAstTemplate | TmplAstElement): TemplateSymbol | ElementSymbol | null;
-  getSymbol(node: TmplAstReference | TmplAstVariable): ReferenceSymbol | VariableSymbol | null;
+  getSymbol(
+    node: TmplAstReference | TmplAstVariable | TmplAstLetDeclaration,
+  ): ReferenceSymbol | VariableSymbol | LetDeclarationSymbol | null;
   getSymbol(node: AST | TmplAstNode): Symbol | null;
   getSymbol(node: AST | TmplAstNode): Symbol | null {
     if (this.symbolCache.has(node)) {
@@ -101,6 +106,8 @@ export class SymbolBuilder {
       symbol = this.getSymbolOfAstTemplate(node);
     } else if (node instanceof TmplAstVariable) {
       symbol = this.getSymbolOfVariable(node);
+    } else if (node instanceof TmplAstLetDeclaration) {
+      symbol = this.getSymbolOfLetDeclaration(node);
     } else if (node instanceof TmplAstReference) {
       symbol = this.getSymbolOfReference(node);
     } else if (node instanceof BindingPipe) {
@@ -620,6 +627,36 @@ export class SymbolBuilder {
     }
   }
 
+  private getSymbolOfLetDeclaration(decl: TmplAstLetDeclaration): LetDeclarationSymbol | null {
+    const node = findFirstMatchingNode(this.typeCheckBlock, {
+      withSpan: decl.sourceSpan,
+      filter: ts.isVariableDeclaration,
+    });
+
+    if (node === null) {
+      return null;
+    }
+
+    const nodeValueSymbol = this.getSymbolOfTsNode(node.initializer!);
+
+    if (nodeValueSymbol === null) {
+      return null;
+    }
+
+    return {
+      tsType: nodeValueSymbol.tsType,
+      tsSymbol: nodeValueSymbol.tsSymbol,
+      initializerLocation: nodeValueSymbol.tcbLocation,
+      kind: SymbolKind.LetDeclaration,
+      declaration: decl,
+      localVarLocation: {
+        tcbPath: this.tcbPath,
+        isShimFile: this.tcbIsShim,
+        positionInFile: this.getTcbPositionForNode(node.name),
+      },
+    };
+  }
+
   private getSymbolOfPipe(expression: BindingPipe): PipeSymbol | null {
     const methodAccess = findFirstMatchingNode(this.typeCheckBlock, {
       withSpan: expression.nameSpan,
@@ -660,7 +697,7 @@ export class SymbolBuilder {
 
   private getSymbolOfTemplateExpression(
     expression: AST,
-  ): VariableSymbol | ReferenceSymbol | ExpressionSymbol | null {
+  ): VariableSymbol | ReferenceSymbol | ExpressionSymbol | LetDeclarationSymbol | null {
     if (expression instanceof ASTWithSource) {
       expression = expression.ast;
     }
@@ -672,9 +709,13 @@ export class SymbolBuilder {
 
     let withSpan = expression.sourceSpan;
 
-    // The `name` part of a `PropertyWrite` and a non-safe `Call` does not have its own
+    // The `name` part of a `PropertyWrite` and `ASTWithName` do not have their own
     // AST so there is no way to retrieve a `Symbol` for just the `name` via a specific node.
-    if (expression instanceof PropertyWrite) {
+    // Also skipping SafePropertyReads as it breaks nullish coalescing not nullable extended diagnostic
+    if (
+      expression instanceof PropertyWrite ||
+      (expression instanceof ASTWithName && !(expression instanceof SafePropertyRead))
+    ) {
       withSpan = expression.nameSpan;
     }
 
@@ -734,6 +775,8 @@ export class SymbolBuilder {
     let tsSymbol: ts.Symbol | undefined;
     if (ts.isPropertyAccessExpression(node)) {
       tsSymbol = this.getTypeChecker().getSymbolAtLocation(node.name);
+    } else if (ts.isCallExpression(node)) {
+      tsSymbol = this.getTypeChecker().getSymbolAtLocation(node.expression);
     } else {
       tsSymbol = this.getTypeChecker().getSymbolAtLocation(node);
     }

@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {defaultEquals, ValueEqualityFn} from './equality';
@@ -85,6 +85,10 @@ export function signalUpdateFn<T>(node: SignalNode<T>, updater: (value: T) => T)
   }
 
   signalSetFn(node, updater(node.value));
+}
+
+export function runPostSignalSetFn(): void {
+  postSignalSetFn?.();
 }
 
 // Note: Using an IIFE here to ensure that the spread assignment is not considered
