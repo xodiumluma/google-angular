@@ -37,10 +37,8 @@ export {
   DeferBlockDetails as ɵDeferBlockDetails,
   getDeferBlocks as ɵgetDeferBlocks,
 } from './defer/discovery';
-export {
-  renderDeferBlockState as ɵrenderDeferBlockState,
-  triggerResourceLoading as ɵtriggerResourceLoading,
-} from './defer/instructions';
+export {renderDeferBlockState as ɵrenderDeferBlockState} from './defer/rendering';
+export {triggerResourceLoading as ɵtriggerResourceLoading} from './defer/triggering';
 export {
   DeferBlockBehavior as ɵDeferBlockBehavior,
   DeferBlockConfig as ɵDeferBlockConfig,
@@ -70,10 +68,14 @@ export {annotateForHydration as ɵannotateForHydration} from './hydration/annota
 export {
   withDomHydration as ɵwithDomHydration,
   withI18nSupport as ɵwithI18nSupport,
+  withIncrementalHydration as ɵwithIncrementalHydration,
 } from './hydration/api';
 export {withEventReplay as ɵwithEventReplay} from './hydration/event_replay';
 export {JSACTION_EVENT_CONTRACT as ɵJSACTION_EVENT_CONTRACT} from './event_delegation_utils';
-export {IS_HYDRATION_DOM_REUSE_ENABLED as ɵIS_HYDRATION_DOM_REUSE_ENABLED} from './hydration/tokens';
+export {
+  IS_HYDRATION_DOM_REUSE_ENABLED as ɵIS_HYDRATION_DOM_REUSE_ENABLED,
+  IS_INCREMENTAL_HYDRATION_ENABLED as ɵIS_INCREMENTAL_HYDRATION_ENABLED,
+} from './hydration/tokens';
 export {
   HydratedNode as ɵHydratedNode,
   HydrationInfo as ɵHydrationInfo,
@@ -145,3 +147,5 @@ export {
   enableProfiling as ɵenableProfiling,
   disableProfiling as ɵdisableProfiling,
 } from './profiler';
+
+export {getClosestComponentName as ɵgetClosestComponentName} from './internal/get_closest_component_name';

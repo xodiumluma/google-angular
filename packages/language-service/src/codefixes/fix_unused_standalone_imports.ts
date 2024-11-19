@@ -20,52 +20,71 @@ export const fixUnusedStandaloneImportsMeta: CodeActionMeta = {
   getCodeActions: () => [],
   fixIds: [FixIdForCodeFixesAll.FIX_UNUSED_STANDALONE_IMPORTS],
   getAllCodeActions: ({diagnostics}) => {
+    const arrayUpdates = new Map<tss.ArrayLiteralExpression, Set<tss.Expression>>();
+    const arraysToClear = new Set<tss.ArrayLiteralExpression>();
     const changes: tss.FileTextChanges[] = [];
 
     for (const diag of diagnostics) {
-      const {start, length, file, relatedInformation} = diag;
+      const {start, length, file} = diag;
       if (file === undefined || start === undefined || length == undefined) {
         continue;
       }
 
       const node = findFirstMatchingNode(file, {
-        filter: (current): current is tss.ArrayLiteralExpression =>
-          current.getStart() === start &&
-          current.getWidth() === length &&
-          tss.isArrayLiteralExpression(current),
+        filter: (n): n is tss.Expression => n.getStart() === start && n.getWidth() === length,
       });
+      const parent = node?.parent || null;
 
-      if (node === null) {
+      if (node === null || parent === null) {
         continue;
       }
 
-      let newText: string;
-
-      // If `relatedInformation` is empty, it means that all the imports are unused.
-      // Replace the array with an empty array.
-      if (relatedInformation === undefined || relatedInformation.length === 0) {
-        newText = '[]';
-      } else {
-        // Otherwise each `relatedInformation` entry points to an unused import that should be
-        // filtered out. We make a set of ranges corresponding to nodes which will be deleted and
-        // remove all nodes that belong to the set.
-        const excludeRanges = new Set(
-          relatedInformation.map((info) => `${info.start}-${info.length}`),
-        );
-        const newArray = tss.factory.updateArrayLiteralExpression(
-          node,
-          node.elements.filter((el) => !excludeRanges.has(`${el.getStart()}-${el.getWidth()}`)),
-        );
-
-        newText = tss.createPrinter().printNode(tss.EmitHint.Unspecified, newArray, file);
+      // If the diagnostic is reported on the name of the `imports` array initializer, it means
+      // that all imports are unused so we can clear the entire array. Otherwise if it's reported
+      // on a single element, we only have to remove that element.
+      if (
+        tss.isPropertyAssignment(parent) &&
+        parent.name === node &&
+        tss.isArrayLiteralExpression(parent.initializer)
+      ) {
+        arraysToClear.add(parent.initializer);
+      } else if (tss.isArrayLiteralExpression(parent)) {
+        if (!arrayUpdates.has(parent)) {
+          arrayUpdates.set(parent, new Set());
+        }
+        arrayUpdates.get(parent)!.add(node);
       }
+    }
+
+    for (const array of arraysToClear) {
+      changes.push({
+        fileName: array.getSourceFile().fileName,
+        textChanges: [
+          {
+            span: {start: array.getStart(), length: array.getWidth()},
+            newText: '[]',
+          },
+        ],
+      });
+    }
+
+    for (const [array, toRemove] of arrayUpdates) {
+      if (arraysToClear.has(array)) {
+        continue;
+      }
+
+      const file = array.getSourceFile();
+      const newArray = tss.factory.updateArrayLiteralExpression(
+        array,
+        array.elements.filter((el) => !toRemove.has(el)),
+      );
 
       changes.push({
         fileName: file.fileName,
         textChanges: [
           {
-            span: {start, length},
-            newText,
+            span: {start: array.getStart(), length: array.getWidth()},
+            newText: tss.createPrinter().printNode(tss.EmitHint.Unspecified, newArray, file),
           },
         ],
       });
